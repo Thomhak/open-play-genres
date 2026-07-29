@@ -1,0 +1,4 @@
+project:
+  title: "Playtime–wellbeing associations are practically null across video game genres"
+  render:
+    - manuscript.qmd

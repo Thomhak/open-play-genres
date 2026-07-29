@@ -1,0 +1,142 @@
+---
+title: "Supplementary Materials: Full Model Output"
+subtitle: "Wellbeing effects (do not) hold constant across video game genres"
+date: last-modified
+execute:
+  warning: false
+  message: false
+  echo: false
+format:
+  html:
+    toc: true
+    theme: cosmo
+    embed-resources: true
+---
+
+This supplement reports the full posterior summaries for the four Bayesian
+multilevel models in the main manuscript: M0 (total playtime REWB), M1
+(pre-registered fixed-effects genre model), M2 (hierarchical prior genre
+model), and M3 (multi-membership genre model). Models are loaded from the
+cached fits in `models/`; to regenerate them, render `manuscript.qmd`.
+
+```{r}
+#| label: setup
+#| include: false
+
+library(here)
+library(dplyr)
+library(tibble)
+library(glue)
+library(brms)
+library(posterior)
+library(tinytable)
+
+h1_model      <- readRDS(here("models/h1_rewb_model.rds"))
+h2_model      <- readRDS(here("models/h2_genre_model.rds"))
+h2_hier_model <- readRDS(here("models/h2_hier_model_v2.rds"))
+h2_mm_model   <- readRDS(here("models/h2_mm_model_full.rds"))
+
+# Convert summary(brmsfit) into a single tidy table with grouped sections
+# (population-level effects, group-level effects per grouping factor, and
+# family-specific parameters), rendered with tinytable. Custom stanvars
+# parameters (e.g. M2's tau hyperparameters) are absent from summary() and
+# can be appended via extra_pars, summarised directly from the draws.
+brms_summary_tt <- function(model, extra_pars = NULL) {
+  s <- summary(model)
+
+  tidy_section <- function(df, section) {
+    df |>
+      tibble::rownames_to_column("Parameter") |>
+      as_tibble() |>
+      mutate(section = section)
+  }
+
+  sections <- list(tidy_section(s$fixed, "Population-level effects"))
+  for (g in names(s$random)) {
+    sections <- c(sections, list(
+      tidy_section(s$random[[g]], glue("Group-level effects: {g}"))
+    ))
+  }
+  sections <- c(sections, list(
+    tidy_section(s$spec_pars, "Family-specific parameters")
+  ))
+
+  if (!is.null(extra_pars)) {
+    extra <- posterior::summarise_draws(
+      posterior::subset_draws(posterior::as_draws_array(model), variable = extra_pars),
+      Estimate = mean, Est.Error = sd,
+      ~posterior::quantile2(.x, probs = c(0.025, 0.975)),
+      Rhat = posterior::rhat,
+      Bulk_ESS = posterior::ess_bulk, Tail_ESS = posterior::ess_tail
+    ) |>
+      rename(Parameter = variable, `l-95% CI` = q2.5, `u-95% CI` = q97.5) |>
+      mutate(section = "Model-specific hyperparameters")
+    sections <- c(sections, list(extra))
+  }
+
+  combined <- bind_rows(sections) |>
+    transmute(
+      section,
+      Parameter,
+      Estimate     = sprintf("%.3f", Estimate),
+      `Est. error` = sprintf("%.3f", Est.Error),
+      `95% CrI`    = sprintf("[%.3f, %.3f]", `l-95% CI`, `u-95% CI`),
+      `R-hat`      = sprintf("%.3f", Rhat),
+      `Bulk ESS`   = sprintf("%d", round(Bulk_ESS)),
+      `Tail ESS`   = sprintf("%d", round(Tail_ESS))
+    )
+
+  # Row indices where each section starts (for tinytable group headers)
+  group_starts <- combined |>
+    mutate(row = row_number()) |>
+    group_by(section) |>
+    summarise(start = min(row), .groups = "drop") |>
+    arrange(start)
+  group_i <- as.list(group_starts$start)
+  names(group_i) <- group_starts$section
+
+  combined |>
+    select(-section) |>
+    tt() |>
+    group_tt(i = group_i) |>
+    format_tt(escape = TRUE) |>
+    style_tt(i = 0, bold = TRUE)
+}
+```
+
+# M0: Total Playtime (H1)
+
+```{r}
+#| label: tbl-supp-m0
+#| tbl-cap: "Full posterior summary for M0 (total playtime REWB model). Estimates are posterior means with 95% credible intervals; R-hat and effective sample sizes (ESS) are convergence diagnostics."
+
+brms_summary_tt(h1_model)
+```
+
+# M1: Pre-Registered Fixed-Effects (H2)
+
+```{r}
+#| label: tbl-supp-m1
+#| tbl-cap: "Full posterior summary for M1 (pre-registered fixed-effects genre model). Genre parameters are labelled `gh_{genre}_within` and `gh_{genre}_between` for the within- and between-person exposure terms."
+
+brms_summary_tt(h2_model)
+```
+
+# M2: Hierarchical Prior (H2)
+
+```{r}
+#| label: tbl-supp-m2
+#| tbl-cap: "Full posterior summary for M2 (hierarchical prior genre model). `tau_genre_within` and `tau_genre_between` are the learned hyperparameters governing partial pooling of the genre coefficients."
+
+brms_summary_tt(h2_hier_model,
+                extra_pars = c("tau_genre_within", "tau_genre_between"))
+```
+
+# M3: Multi-Membership (H2)
+
+```{r}
+#| label: tbl-supp-m3
+#| tbl-cap: "Full posterior summary for M3 (multi-membership genre model). Group-level standard deviations for the `mm()` term are the genre heterogeneity parameters (σ~s~ within and between)."
+
+brms_summary_tt(h2_mm_model)
+```

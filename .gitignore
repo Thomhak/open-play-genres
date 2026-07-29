@@ -1,0 +1,84 @@
+# Quarto build artifacts
+/.quarto/
+**/*.quarto_ipynb
+*cache*
+**/cache/**
+**/*cache*/
+
+# R environment
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+renv/staging/
+
+# Credentials / environment
+.Renviron
+
+# macOS
+.DS_Store
+
+# Office lock files
+~$*
+
+# Data (participant telemetry — download via `make data`)
+data/*
+
+# Bayesian model fits (brms; large, local only)
+models/
+
+# Rendered outputs (regenerable via `quarto render`)
+*.html
+*.pdf
+*.docx
+*.doc
+manuscript_files/
+manuscript_prereg_files/
+
+# Full Open Play repo clone (data downloaded via Makefile instead)
+open-play-v1.1.0/
+
+# Out-of-scope for this repo
+output/
+papers/
+pre-registration/
+demographics paper/
+codebook.xlsx
+
+# Standalone model-fitting scripts (development only; code is in manuscript.qmd)
+R/standalone/
+
+# Frozen pre-registered supplement (kept local for now; re-include before submission)
+manuscript_prereg.qmd
+R/01_preprocess_prereg.R
+
+# Dev tooling (local only)
+scripts/
+
+# Quarto intermediate
+manuscript.rmarkdown
+manuscript.typ
+manuscript_prereg.typ
+
+# Editor backups
+*.bak
+
+# Local backup of an earlier draft (kept on disk, not published)
+manuscript copy.qmd
+
+# Working notes (local only)
+notes/
+
+# Internal dev/agent notes (local only)
+.internal/
+CLAUDE.md
+
+# Media / fonts / JS / CSS
+*.mp4
+*.mp3
+*.wav
+*.ogg
+*.woff
+*.tex
+/.luarc.json

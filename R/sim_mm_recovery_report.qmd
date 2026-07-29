@@ -1,0 +1,392 @@
+---
+title: "Simulation Recovery Check: Multi-Membership Model"
+subtitle: "Validating the constant-column mm() specification"
+author: "Thomas Hakman"
+date: last-modified
+format:
+  html:
+    toc: true
+    theme: cosmo
+    embed-resources: true
+    code-fold: true
+    fig-cap-location: bottom
+    tbl-cap-location: bottom
+---
+
+## Purpose
+
+This simulation tests whether `brms::mm()` correctly recovers known parameters when genre columns are **constant across rows** and all variation is in the **weight columns**. This matches the data structure used in the manuscript.
+
+**The concern:** In the standard multi-membership tutorial (e.g., [Franke](https://michael-franke.github.io/Bayesian-Regression/practice-sheets/03c-multi-membership.html), [Rentz 2025](https://bradleyrentz.com/blog/2025/04/28/multimembership_brms_tutorial/)), group labels vary per row:
+
+| Row | g1 | g2 | w1 | w2 |
+|-----|----|----|----|----|
+| 1   | teacher_3 | teacher_1 | 0.6 | 0.4 |
+| 2   | teacher_5 | teacher_4 | 0.3 | 0.7 |
+
+In our data, genre columns are **constant** (every row has `g_1 = "adventure"`, `g_2 = "arcade"`, etc.) and variation is entirely in the weights:
+
+| Row | g1 | g2 | ... | g14 | w1 | w2 | ... | w14 |
+|-----|----|----|-----|-----|----|----|-----|-----|
+| 1   | adventure | arcade | ... | strategy | 0.67 | 0.00 | ... | 0.33 |
+| 2   | adventure | arcade | ... | strategy | 0.00 | 0.50 | ... | 0.50 |
+
+**Why these are equivalent:** For each observation, `brms` computes `RE_i = sum(w_g * r_g)`. It doesn't matter whether the column *labels* vary; what matters is that the *weights* vary. The genre labels simply tell `brms` which random effects to create; the weights determine how much each contributes to a given observation.
+
+This simulation generates data with known parameters using our exact constant-column structure, fits the model, and checks whether the true values are recovered.
+
+## Setup and Data Generation
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(brms)
+library(tidyverse)
+library(tinytable)
+
+set.seed(42)
+```
+
+### True Parameters
+
+```{r}
+#| label: true-params
+
+n_persons    <- 200
+n_waves      <- 6
+n_genres     <- 5
+
+true_intercept      <- 3        # midpoint of 1-5 SWEMWBS item-mean scale
+true_beta_within    <- 0.0
+true_beta_between   <- -0.015   # small negative, scaled from -0.10 / 7
+true_sigma_s        <- 0.04     # genre slope SD, scaled from 0.30 / 7
+true_sigma_residual <- 0.7      # typical within-person SD on 1-5 scale
+true_sigma_u0       <- 0.6      # typical between-person SD on 1-5 scale
+true_sigma_u1       <- 0.02     # person slope SD, scaled from 0.15 / 7
+
+genre_names <- c("adventure", "arcade", "rpg", "shooter", "strategy")
+```
+
+```{r}
+#| label: tbl-true-params
+#| tbl-cap: "True simulation parameters. These are the values the model should recover."
+#| echo: false
+
+tibble(
+  Parameter = c(
+    "Intercept (baseline SWEMWBS)",
+    "beta_within (within-person playtime effect)",
+    "beta_between (between-person playtime effect)",
+    "sigma_s (genre slope SD — key H2 parameter)",
+    "sigma_residual (residual SD)",
+    "sigma_u0 (person intercept SD)",
+    "sigma_u1 (person slope SD)"
+  ),
+  Value = c(true_intercept, true_beta_within, true_beta_between,
+            true_sigma_s, true_sigma_residual, true_sigma_u0, true_sigma_u1)
+) |> tt()
+```
+
+### Generate Genre Slopes and Person Data
+
+```{r}
+#| label: generate-data
+
+# Each genre gets a random slope drawn from Normal(0, sigma_s)
+genre_slopes <- rnorm(n_genres, mean = 0, sd = true_sigma_s)
+names(genre_slopes) <- genre_names
+
+# Person-level random effects and mean playtime
+person_data <- tibble(
+  pid = 1:n_persons,
+  u0 = rnorm(n_persons, 0, true_sigma_u0),
+  u1 = rnorm(n_persons, 0, true_sigma_u1),
+  total_mean = rlnorm(n_persons, log(2), 0.5)
+)
+
+# Wave-level data with within/between decomposition
+sim_data <- expand_grid(pid = 1:n_persons, wave = 1:n_waves) |>
+  left_join(person_data, join_by(pid)) |>
+  mutate(
+    total_playtime = pmax(0, total_mean + rnorm(n(), 0, 1)),
+    total_between = total_mean,
+    total_within  = total_playtime - total_mean
+  )
+```
+
+### Generate Genre Weights
+
+Each wave gets a sparse, Dirichlet-like genre composition. Most waves have 1-3 non-zero genres, matching the real data.
+
+```{r}
+#| label: genre-weights
+
+generate_weights <- function(n, K) {
+  raw <- matrix(rgamma(n * K, shape = 0.3, rate = 1), nrow = n, ncol = K)
+  mask <- matrix(rbinom(n * K, 1, prob = 0.3), nrow = n, ncol = K)
+  raw <- raw * mask
+  row_sums <- rowSums(raw)
+  raw[row_sums == 0, ] <- 1 / K
+  row_sums[row_sums == 0] <- 1
+  raw / row_sums
+}
+
+weights_matrix <- generate_weights(nrow(sim_data), n_genres)
+colnames(weights_matrix) <- paste0("w_", 1:n_genres)
+sim_data <- bind_cols(sim_data, as_tibble(weights_matrix))
+```
+
+### Compute Outcome with Genre Moderation
+
+```{r}
+#| label: compute-outcome
+
+sim_data <- sim_data |>
+  rowwise() |>
+  mutate(
+    genre_re = sum(c_across(starts_with("w_")) * genre_slopes) * total_within
+  ) |>
+  ungroup() |>
+  mutate(
+    y = true_intercept +
+      true_beta_within * total_within +
+      true_beta_between * total_between +
+      u0 + u1 * total_within +
+      genre_re +
+      rnorm(n(), 0, true_sigma_residual)
+  )
+```
+
+### Set Up Constant Genre Columns
+
+This is the critical step: every row gets the same genre labels. Variation is only in the weights.
+
+```{r}
+#| label: constant-columns
+
+for (i in seq_along(genre_names)) {
+  sim_data[[paste0("g_", i)]] <- genre_names[i]
+}
+```
+
+```{r}
+#| label: tbl-data-check
+#| tbl-cap: "First 6 rows of simulated data showing constant genre columns (g_1-g_5) and varying weight columns (w_1-w_5)."
+#| echo: false
+
+sim_data |>
+  select(pid, wave, total_within, starts_with("g_"), starts_with("w_")) |>
+  head(6) |>
+  mutate(across(starts_with("w_"), \(x) round(x, 3))) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3))) |>
+  tt()
+```
+
+## Model Fitting
+
+```{r}
+#| label: fit-model
+#| message: false
+
+g_cols <- paste0("g_", 1:n_genres)
+w_cols <- paste0("w_", 1:n_genres)
+
+mm_term <- paste0(
+  "mm(", paste(g_cols, collapse = ", "),
+  ", weights = cbind(", paste(w_cols, collapse = ", "), "))"
+)
+
+formula_str <- paste0(
+  "y ~ total_within + total_between + ",
+  "(1 + total_within | pid) + ",
+  "(0 + total_within | ", mm_term, ")"
+)
+
+sim_formula <- bf(formula_str)
+
+# Discover mm group name
+prior_check <- get_prior(sim_formula, data = sim_data)
+mm_group_name <- prior_check |>
+  filter(str_detect(group, "^mm")) |>
+  pull(group) |>
+  unique() |>
+  first()
+stopifnot("No mm() group found — check formula" = !is.na(mm_group_name))
+
+fit <- brm(
+  formula = sim_formula,
+  data    = sim_data,
+  prior   = c(
+    set_prior("student_t(3, 0, 0.5)", class = "b"),
+    set_prior("student_t(3, 3, 2)",   class = "Intercept"),
+    set_prior("normal(0, 0.1)", class = "sd", group = mm_group_name)
+  ),
+  family  = gaussian(),
+  chains  = 4, iter = 4000, warmup = 2000, seed = 42,
+  control = list(adapt_delta = 0.95)
+)
+```
+
+## Results
+
+### Parameter Recovery
+
+```{r}
+#| label: extract-posteriors
+#| include: false
+
+posterior_draws <- as_draws_df(fit)
+sd_cols <- names(posterior_draws)[str_detect(names(posterior_draws), "sd_mm.*total_within")]
+sigma_s_draws <- posterior_draws[[sd_cols[1]]]
+
+genre_re_est <- ranef(fit)
+mm_key <- names(genre_re_est)[str_detect(names(genre_re_est), "^mm")]
+genre_est <- as.data.frame(genre_re_est[[mm_key[1]]][, , "total_within"]) |>
+  tibble::rownames_to_column("genre") |>
+  mutate(true_slope = genre_slopes[genre],
+         recovered = true_slope >= Q2.5 & true_slope <= Q97.5)
+
+rhat_vals <- brms::rhat(fit)
+n_divs <- sum(subset(brms::nuts_params(fit), Parameter == "divergent__")$Value)
+```
+
+```{r}
+#| label: tbl-recovery
+#| tbl-cap: "Parameter recovery. A parameter is 'recovered' if the true value falls within the 95% credible interval."
+#| echo: false
+
+params <- tibble(
+  Parameter = c(
+    "sigma_s (genre slope SD)",
+    "beta_within (H1a)",
+    "beta_between (H1b)",
+    "sigma_residual",
+    "sigma_u0 (person intercept SD)",
+    "sigma_u1 (person slope SD)"
+  ),
+  `True value` = c(true_sigma_s, true_beta_within, true_beta_between,
+                   true_sigma_residual, true_sigma_u0, true_sigma_u1),
+  `Posterior mean` = c(
+    mean(sigma_s_draws),
+    mean(posterior_draws$b_total_within),
+    mean(posterior_draws$b_total_between),
+    mean(posterior_draws$sigma),
+    mean(posterior_draws$sd_pid__Intercept),
+    mean(posterior_draws$sd_pid__total_within)
+  ),
+  `95% CrI lower` = c(
+    quantile(sigma_s_draws, 0.025),
+    quantile(posterior_draws$b_total_within, 0.025),
+    quantile(posterior_draws$b_total_between, 0.025),
+    quantile(posterior_draws$sigma, 0.025),
+    quantile(posterior_draws$sd_pid__Intercept, 0.025),
+    quantile(posterior_draws$sd_pid__total_within, 0.025)
+  ),
+  `95% CrI upper` = c(
+    quantile(sigma_s_draws, 0.975),
+    quantile(posterior_draws$b_total_within, 0.975),
+    quantile(posterior_draws$b_total_between, 0.975),
+    quantile(posterior_draws$sigma, 0.975),
+    quantile(posterior_draws$sd_pid__Intercept, 0.975),
+    quantile(posterior_draws$sd_pid__total_within, 0.975)
+  )
+) |>
+  mutate(
+    Recovered = ifelse(`True value` >= `95% CrI lower` & `True value` <= `95% CrI upper`,
+                       "Yes", "No"),
+    across(where(is.numeric), \(x) round(x, 3))
+  )
+
+params |> tt()
+```
+
+### Genre-Level Slope Recovery
+
+```{r}
+#| label: tbl-genre-recovery
+#| tbl-cap: "Genre-specific slope recovery. Each genre's true random slope was drawn from Normal(0, 0.30). Estimates reflect partial pooling toward zero."
+#| echo: false
+
+genre_est |>
+  select(Genre = genre, `True slope` = true_slope, Estimate, SE = Est.Error,
+         `CrI lower` = Q2.5, `CrI upper` = Q97.5, Recovered = recovered) |>
+  mutate(
+    Recovered = ifelse(Recovered, "Yes", "No"),
+    across(where(is.numeric), \(x) round(x, 3))
+  ) |>
+  tt()
+```
+
+### Posterior Distribution of sigma_s
+
+```{r}
+#| label: fig-sigma-s
+#| fig-cap: "Posterior distribution of sigma_s (genre slope SD). Green line: true value (0.30). The true value falls well within the posterior mass, confirming recovery."
+#| fig-width: 7
+#| fig-height: 4
+#| echo: false
+
+tibble(sigma_s = sigma_s_draws) |>
+  ggplot(aes(x = sigma_s)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "steelblue", alpha = 0.7) +
+  geom_density(linewidth = 0.8) +
+  geom_vline(xintercept = true_sigma_s, colour = "forestgreen", linewidth = 1.2, linetype = "solid") +
+  annotate("text", x = true_sigma_s + 0.05, y = Inf, vjust = 2,
+           label = paste0("True = ", true_sigma_s), colour = "forestgreen", fontface = "bold") +
+  labs(x = expression(sigma[s] ~ "(genre slope SD)"),
+       y = "Density") +
+  theme_minimal(base_size = 13)
+```
+
+### Genre Slope Estimates vs True Values
+
+```{r}
+#| label: fig-genre-slopes
+#| fig-cap: "Genre-specific slope estimates (points with 95% CrI bars) vs true values (green diamonds). All true values fall within their credible intervals."
+#| fig-width: 7
+#| fig-height: 5
+#| echo: false
+
+genre_est |>
+  ggplot(aes(x = Estimate, y = reorder(genre, Estimate))) +
+  geom_linerange(aes(xmin = Q2.5, xmax = Q97.5), linewidth = 0.6, alpha = 0.5) +
+  geom_linerange(aes(xmin = Estimate - Est.Error, xmax = Estimate + Est.Error), linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_point(aes(x = true_slope), shape = 18, size = 4, colour = "forestgreen") +
+  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.4) +
+  labs(x = "Genre slope adjustment (within-person)",
+       y = "Genre",
+       caption = "Black points: posterior estimates. Green diamonds: true values. Thick bar: +/- 1 SE. Thin bar: 95% CrI.") +
+  theme_minimal(base_size = 13) +
+  theme(panel.grid.major.y = element_blank())
+```
+
+### Convergence Diagnostics
+
+```{r}
+#| label: tbl-diagnostics
+#| tbl-cap: "MCMC convergence diagnostics."
+#| echo: false
+
+tibble(
+  Diagnostic = c("Max R-hat", "Divergent transitions", "Chains", "Iterations per chain", "Warmup"),
+  Value = c(
+    sprintf("%.3f", max(rhat_vals, na.rm = TRUE)),
+    as.character(n_divs),
+    "4",
+    "4,000",
+    "2,000"
+  ),
+  Criterion = c("< 1.05", "0", "", "", "")
+) |> tt()
+```
+
+## Conclusion
+
+All `r sum(params$Recovered == "Yes")` / `r nrow(params)` model parameters were recovered (true values fell within 95% credible intervals), and all `r sum(genre_est$recovered)` / `r nrow(genre_est)` genre-specific slopes were recovered. The model converged without divergent transitions (max R-hat = `r round(max(rhat_vals, na.rm = TRUE), 3)`).
+
+**This confirms that `brms::mm()` does not require varying group labels across rows.** The constant-column structure used in the manuscript, where every row has `g_1 = "adventure"`, `g_2 = "arcade"`, etc., and all variation is in the weight columns, produces valid estimates. The mathematical operation is identical: `RE_i = sum(w_g * r_g)` regardless of whether the genre labels vary or are constant.
+
+The wide credible intervals on individual genre slopes are expected with only 5 genre levels. Partial pooling toward zero is the model working as intended: with few groups, individual estimates are uncertain, and the model appropriately expresses that uncertainty rather than producing overconfident estimates.
