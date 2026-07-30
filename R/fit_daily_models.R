@@ -18,8 +18,8 @@ suppressPackageStartupMessages({
 })
 
 which_block <- commandArgs(trailingOnly = TRUE)[1]
-if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge")) {
-  stop("Argument must be 'mm', 'rest', or 'bridge'")
+if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge", "m1")) {
+  stop("Argument must be 'mm', 'rest', 'bridge', or 'm1'")
 }
 dir.create(here("models/daily"), showWarnings = FALSE, recursive = TRUE)
 
@@ -110,7 +110,27 @@ message(sprintf("Rows: life_sat %d, valence %d, pids %d",
 
 # ---- Model blocks ----------------------------------------------------------
 
-if (which_block == "bridge") {
+if (which_block == "m1") {
+
+  # M1-daily: unpooled fixed-effects genre specification (mirrors the
+  # registered h2_genre_model), primary outcome only. Same prior family as
+  # the other daily fits. Its raw per-draw coefficient SDs carry sampling
+  # noise, as in the registered analysis; reported with that caveat.
+  m1_rhs <- paste(c(gh_w, gh_b), collapse = " + ")
+  message("Fitting M1-daily (life_sat)...")
+  invisible(brm(
+    bf(as.formula(paste("life_sat ~", m1_rhs, "+ (1 | pid)"))),
+    data   = model_data_ls,
+    prior  = set_prior(prior_b, class = "b") +
+             set_prior(prior_intercept, class = "Intercept"),
+    family = gaussian(),
+    chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
+    control = list(adapt_delta = 0.95),
+    file = here("models/daily/m1_daily_ls"), file_refit = "never"
+  ))
+  message("M1-daily done.")
+
+} else if (which_block == "bridge") {
 
   # Same-instrument bridge: M0 structure on BIWEEKLY life satisfaction.
   # Mirrors the registered M0 frame (full survey, zero-filled exposure, no

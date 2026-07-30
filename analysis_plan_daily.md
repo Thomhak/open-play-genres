@@ -198,6 +198,23 @@ both are disclosed in the manuscript text.
    benchmark; prose says "visible within a day, averaged away over two
    weeks", never "meaningful short-term effect".
 
+4. SINGLE BENCHMARK + M1-DAILY (2026-07-30, author decisions). (a) The
+   SD-transfer sensitivity bound is REMOVED from the manuscript entirely;
+   the leisure-anchored 1.5/h is the sole equivalence benchmark. This plan
+   remains the audit trail for the earlier constructions. Prior scales in
+   R/fit_daily_models.R retain their original data-derived values (0.5 x r
+   with r from the s_w ratio, ~17.7 for b); they are machinery, not
+   benchmarks, and are weakly informative either way; no refits. (b) M1-daily
+   (unpooled 28-coefficient fixed-effects specification, life_sat only,
+   same prior family) ADDED for cross-grain consistency after the author
+   queried its absence; result mirrors the biweekly signature: raw SD
+   within 0.39 [0.24, 0.55] (noise-inflated vs tau_w 0.16), raw SD between
+   2.28 [1.48, 3.21], exceeding the benchmark exactly as the biweekly M1
+   between-SD exceeds the SESOI; reported with the registered caveat.
+   (c) Daily summary table moved to Appendix E; model colours unified
+   across all model-comparison figures (M1 blue #1f78b4, M2 orange
+   #ff8c00, M3 purple #6a3d9a from the per-genre figure; M0 steelblue).
+
 ## Out of scope (recorded so scope creep is visible)
 
 BPNSFS/BANGS needs, sleep, stressors, social context, displacement items;
