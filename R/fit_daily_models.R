@@ -37,8 +37,8 @@ decompose <- function(df) {
   df |>
     group_by(pid) |>
     mutate(
-      total_within  = total_hours_24h - mean(total_hours_24h, na.rm = TRUE),
-      total_between = mean(total_hours_24h, na.rm = TRUE),
+      total_within  = total_hours_today - mean(total_hours_today, na.rm = TRUE),
+      total_between = mean(total_hours_today, na.rm = TRUE),
       across(all_of(gh_cols),
              list(w = ~ .x - mean(.x, na.rm = TRUE),
                   b = ~ mean(.x, na.rm = TRUE)))
@@ -46,10 +46,18 @@ decompose <- function(df) {
     ungroup()
 }
 
-# Primary frame: coverage-restricted (see analysis plan, pre-fit amendment).
-# Full frame retained for the M0 sensitivity refit only.
-frame      <- decompose(raw_frame |> filter(covered))
+# Primary frame (see analysis plan): telemetry-covered responses from
+# participants with reliable timezone inference, excluding structurally
+# degenerate windows shorter than one hour. The full frame (all responses)
+# is retained for the M0 sensitivity refit and spans both relaxations.
+frame      <- decompose(raw_frame |>
+                          filter(covered, !tz_unreliable, window_hours >= 1))
 frame_full <- decompose(raw_frame)
+message(sprintf("Excluded from primary: %d uncovered, %d tz-unreliable, %d degenerate windows",
+                sum(!raw_frame$covered),
+                sum(raw_frame$covered & raw_frame$tz_unreliable),
+                sum(raw_frame$covered & !raw_frame$tz_unreliable &
+                      raw_frame$window_hours < 1)))
 message(sprintf("Primary (covered) frame: %d responses, %d pids (full: %d, %d)",
                 nrow(frame), n_distinct(frame$pid),
                 nrow(frame_full), n_distinct(frame_full$pid)))
@@ -254,33 +262,7 @@ if (which_block == "m1") {
   ))
   message("M2-daily (life_sat) done.")
 
-  # Lagged direction check (frequentist): previous consecutive day's exposure.
-  # Responses arrive at ~the same time daily, so the previous response's
-  # 24 h window approximates the 24 h preceding today's window.
-  lagged <- frame |>
-    arrange(pid, day) |>
-    group_by(pid) |>
-    mutate(
-      lag_total = lag(total_hours_24h),
-      lag_gap   = day - lag(day)
-    ) |>
-    ungroup() |>
-    filter(lag_gap == 1, !is.na(life_sat), !is.na(lag_total)) |>
-    group_by(pid) |>
-    mutate(
-      lag_within  = lag_total - mean(lag_total),
-      lag_between = mean(lag_total)
-    ) |>
-    ungroup()
-  message(sprintf("Lagged frame: %d consecutive-day pairs, %d pids",
-                  nrow(lagged), n_distinct(lagged$pid)))
-  lag_fit <- lmer(life_sat ~ lag_within + lag_between + (1 | pid),
-                  data = lagged, REML = TRUE,
-                  control = lmerControl(optimizer = "bobyqa"))
-  saveRDS(list(fit = lag_fit, n = nrow(lagged),
-               n_pid = n_distinct(lagged$pid)),
-          here("models/daily/lagged_lmer.rds"))
-  message("Lagged lmer done. All 'rest' fits complete.")
+  message("All 'rest' fits complete.")
 
 } else {
 

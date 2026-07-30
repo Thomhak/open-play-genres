@@ -254,6 +254,39 @@ both are disclosed in the manuscript text.
      M2's tau_between straddles it (62.1% below), so daily between-person
      genre heterogeneity is reported as inconclusive.
 
+6. SAME-DAY EXPOSURE WINDOW (2026-07-30, author decision following the
+   outcome-identity correction). The item asks about "today", so the
+   24-h-before-completion window mismeasured the estimand (it reached into
+   the previous afternoon). New ANALYSIS window: [4 a.m. local of the
+   response's waking day, completion timestamp]; 4 a.m. is the dataset's own
+   LOTUD day convention and assigns after-midnight responses (links live
+   2 p.m.-3 a.m.) to the waking day they describe. Implementation details:
+   - Local time INFERRED per participant from the availability constraint
+     (local completion in [14:00, 03:00)); candidates restricted by intake
+     country (US: UTC-4..-8; UK: 0/+1); ties broken by matching the pid's
+     median local completion hour to the 19:30 evening norm. DST unmodelled
+     (worst case shifts the 4 a.m. boundary by 1 h, where play is rare).
+     Validation: reliable-pid offsets distribute plausibly for the US
+     population under DST-weighted collection (54.5% at -4).
+   - 252 of 1,275 participants have completion times violating the
+     constraint under EVERY candidate offset (>20% of their responses);
+     flagged tz_unreliable and EXCLUDED from the primary frame, with
+     degenerate windows (< 1 h) also excluded. Primary frame: covered &
+     reliable & window >= 1 h -> 13,387 responses / 809 pids (median 19
+     days). The full-frame M0 sensitivity spans all relaxations.
+   - The 24-HOUR window is retained ONLY for positive control 1, whose
+     self-report item (played24hr) asks about the past 24 hours; the
+     control would be invalid on a mismatched window.
+   - LAGGED MODEL REMOVED (author directive): under a same-day estimand
+     the previous-window model no longer has a role.
+   - Zero-exposure share rises to 61.1% (2 p.m. responses precede evening
+     play); this is the estimand (play-so-far vs satisfaction-so-far),
+     stated in text. Window length varies with response time (median
+     ~14 h); disclosed.
+   - All daily fits REFIT on the new exposure; superseded 24 h-window fits
+     archived in models/daily/archive_window24h/. The bridge (biweekly) is
+     unaffected.
+
 ## Out of scope (recorded so scope creep is visible)
 
 BPNSFS/BANGS needs, sleep, stressors, social context, displacement items;
