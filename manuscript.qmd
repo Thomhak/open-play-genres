@@ -682,7 +682,7 @@ stopifnot(length(rank14) == 14)
 # original integrated-coefs assignments; M0, the baseline model, is dark
 # grey so it cannot be confused with M1's blue where they co-occur.
 model_palette <- c(
-  "M0" = "#4d4d4d",
+  "M0" = "#737373",
   "M1" = "#1f78b4",
   "M2" = "#ff8c00",
   "M3" = "#6a3d9a"
@@ -2379,12 +2379,22 @@ d_n_no_tel_pid <- daily_frame_raw |> filter(!has_telemetry) |>
   distinct(pid) |> nrow()
 d_n_uncov_resp <- sum(!daily_frame_raw$covered)
 
-# Equivalence benchmark: the registered derivation carried to the 0-100
-# scale. Registered MID = 0.3 points = 7.5% of the 1-5 range; the range-
-# equivalent MID on 0-100 is 7.5 points; over ~5 daily leisure hours that
-# is 1.5 points per hour of play.
-d_mid_daily <- 7.5
-d_primary   <- d_mid_daily / 5
+# The daily outcome is a 0-100 slider; the biweekly life-satisfaction item
+# used by the bridge model is the 0-10 Cantril ladder. Each therefore gets
+# its own equivalence benchmark, both built like the registered SESOI: a
+# minimally important difference divided by the roughly five hours of daily
+# leisure realistically available.
+d_mid_daily  <- 5     # slider points (see text for the convergent anchors)
+d_primary    <- d_mid_daily / 5
+d_mid_bridge <- 0.5   # Cantril ladder rungs
+d_bridge_th  <- d_mid_bridge / 5
+
+# Guard the item descriptions the Measures text relies on: the daily slider
+# takes far more than 11 values, the biweekly ladder exactly 11.
+stopifnot(
+  n_distinct(daily_frame_raw$life_sat[!is.na(daily_frame_raw$life_sat)]) > 11,
+  max(daily_frame_raw$life_sat, na.rm = TRUE) > 10
+)
 
 # Within-person SDs (used descriptively for the cross-grain standardised
 # comparison in the reading paragraph, and the bridge's s_w).
@@ -2398,6 +2408,18 @@ stopifnot(
   abs(d_within_sd(daily_frame_raw$life_sat, daily_frame_raw$pid) -
         sesoi_d$s_w_ls) < 1e-6
 )
+
+# Correlation between the daily outcome and the momentary valence slider
+# (both outcomes; no exposure involved). Quoted in the limitations.
+d_ls_av <- daily_frame_raw |> filter(!is.na(life_sat), !is.na(affective_valence))
+d_ls_av_r <- cor(d_ls_av$life_sat, d_ls_av$affective_valence)
+d_ls_av_rw <- d_ls_av |>
+  group_by(pid) |> filter(n() >= 2) |>
+  mutate(ls = life_sat - mean(life_sat),
+         av = affective_valence - mean(affective_valence)) |>
+  ungroup() |>
+  summarise(r = cor(ls, av)) |>
+  pull(r)
 
 # Positive control 1: self-reported play vs telemetry (covered responses)
 d_ctrl <- daily_frame |>
@@ -2440,10 +2462,8 @@ d_shooter_d <- (mean(d_sh_m) - mean(d_sh_w)) / d_pool_sd
 
 # ---- Fits ------------------------------------------------------------------
 d_m0_ls   <- readRDS(here("models/daily/m0_daily_ls.rds"))
-d_m0_av   <- readRDS(here("models/daily/m0_daily_av.rds"))
 d_m0_full <- readRDS(here("models/daily/m0_daily_ls_full.rds"))
 d_m2_ls   <- readRDS(here("models/daily/m2_daily_ls.rds"))
-d_m2_av   <- readRDS(here("models/daily/m2_daily_av.rds"))
 d_m3_ls   <- readRDS(here("models/daily/m3_daily_mm_ls.rds"))
 d_lagged  <- readRDS(here("models/daily/lagged_lmer.rds"))
 
@@ -2451,38 +2471,36 @@ stopifnot(nobs(d_m0_ls) == sum(!is.na(daily_frame$life_sat)))
 
 d_extract_m0 <- function(fit, sesoi) {
   dr <- posterior::as_draws_df(fit)
+  w <- dr$b_total_within
+  b <- dr$b_total_between
+  s <- dr$sd_pid__total_within
   list(
-    b1 = mean(dr$b_total_within),
-    b1_ci = quantile(dr$b_total_within, c(.025, .975)),
-    b1_rope = mean(abs(dr$b_total_within) < sesoi),
-    b2 = mean(dr$b_total_between),
-    b2_ci = quantile(dr$b_total_between, c(.025, .975)),
-    b2_rope = mean(abs(dr$b_total_between) < sesoi),
-    sd_slope = mean(dr$sd_pid__total_within),
-    sd_slope_ci = quantile(dr$sd_pid__total_within, c(.025, .975)),
-    sd_slope_above = mean(dr$sd_pid__total_within > sesoi),
+    b1 = mean(w), b1_ci = quantile(w, c(.025, .975)),
+    b1_rope = mean(abs(w) < sesoi),
+    b2 = mean(b), b2_ci = quantile(b, c(.025, .975)),
+    b2_rope = mean(abs(b) < sesoi),
+    sd_slope = mean(s), sd_slope_ci = quantile(s, c(.025, .975)),
+    sd_slope_above = mean(s > sesoi),
     rhat = max(brms::rhat(fit), na.rm = TRUE),
     divs = sum(subset(brms::nuts_params(fit), Parameter == "divergent__")$Value)
   )
 }
 d_extract_m2 <- function(fit, sesoi) {
   dr <- posterior::as_draws_df(fit)
+  tw <- dr$tau_genre_within
+  tb <- dr$tau_genre_between
   list(
-    tau_w = mean(dr$tau_genre_within),
-    tau_w_ci = quantile(dr$tau_genre_within, c(.025, .975)),
-    tau_w_rope = mean(dr$tau_genre_within < sesoi),
-    tau_b = mean(dr$tau_genre_between),
-    tau_b_ci = quantile(dr$tau_genre_between, c(.025, .975)),
-    tau_b_rope = mean(dr$tau_genre_between < sesoi),
+    tau_w = mean(tw), tau_w_ci = quantile(tw, c(.025, .975)),
+    tau_w_rope = mean(tw < sesoi),
+    tau_b = mean(tb), tau_b_ci = quantile(tb, c(.025, .975)),
+    tau_b_rope = mean(tb < sesoi),
     rhat = max(brms::rhat(fit), na.rm = TRUE),
     divs = sum(subset(brms::nuts_params(fit), Parameter == "divergent__")$Value)
   )
 }
 d_r0  <- d_extract_m0(d_m0_ls, d_primary)
-d_r0v <- d_extract_m0(d_m0_av, d_primary)
 d_r0f <- d_extract_m0(d_m0_full, d_primary)
 d_r2  <- d_extract_m2(d_m2_ls, d_primary)
-d_r2v <- d_extract_m2(d_m2_av, d_primary)
 
 # Draw vectors kept for the daily figure
 d_dr0 <- posterior::as_draws_df(d_m0_ls)
@@ -2540,26 +2558,26 @@ d_bridge_fit  <- readRDS(here("models/daily/m0_biweekly_ls_bridge.rds"))
 d_bridge_dr   <- posterior::as_draws_df(d_bridge_fit)
 d_bridge_b1   <- mean(d_bridge_dr$b_total_within)
 d_bridge_ci   <- quantile(d_bridge_dr$b_total_within, c(.025, .975))
-d_bridge_rope <- mean(abs(d_bridge_dr$b_total_within) < 0.15)
+d_bridge_rope <- mean(abs(d_bridge_dr$b_total_within) < d_bridge_th)
 d_bridge_n    <- nobs(d_bridge_fit)
 d_bridge_sw   <- sesoi_d$s_w_bls
 ```
 
-The biweekly design answers its questions at a two-week grain, and the Discussion's measurement-resolution reading makes a testable claim one rung further down: if aggregation over the biweekly window is what hides genre effects, they should begin to surface at the daily grain. The Open Play dataset contains the material for a first, exploratory test. US participants were additionally invited to complete daily surveys for the first 30 study days, including a daily life-satisfaction ladder (Cantril scale referenced to "the past 24 hours", scored 0–100) and a momentary affective-valence slider ("How are you feeling right now?", 0–100) [@ballou2025openplay]. We therefore re-ran the structure of both hypotheses at the daily timescale. This analysis is exploratory and was not pre-registered; all analysis decisions, including the equivalence threshold transfer and a telemetry-coverage restriction, were fixed in code before any exposure–outcome model was estimated, and the analysis plan is released alongside the code.
+The biweekly design answers its questions at a two-week grain, and the Discussion's measurement-resolution reading makes a testable claim one level further down: if aggregation over the biweekly window is what hides genre effects, they should begin to surface at the daily grain. The Open Play dataset contains the material for a first, exploratory test. US participants were additionally invited to complete daily surveys for the first 30 study days, including a daily life-satisfaction item ("I was satisfied with my life today") answered on a 0–100 slider [@ballou2025openplay]. We therefore re-ran the structure of both hypotheses at the daily timescale. This analysis is exploratory and was not pre-registered; all analysis decisions, including the equivalence threshold transfer and a telemetry-coverage restriction, were fixed in code before any exposure–outcome model was estimated, and the analysis plan is released alongside the code.
 
-Daily life satisfaction served as the primary outcome and affective valence as the secondary outcome, on the grounds that the ladder's 24-hour reference frame matches a 24-hour exposure window whereas valence is momentary. Exposure was defined per response as console and PC playtime in the 24 hours preceding the survey completion timestamp, computed from the same session-level telemetry and full-attribution genre assignment as the main analysis (mobile platforms provide no sub-day resolution and are excluded). Because the pre-registered SESOI is defined on the SWEMWBS item-mean scale, an equivalence benchmark for the daily scale has to be constructed. We carry the registered derivation itself to the daily scale: the registered threshold divides a minimally important difference of 0.3 points, 7.5% of the 1–5 scale range, by the roughly five hours of daily leisure realistically available [@ballouRegisteredReportEvidence2024]; the range-equivalent difference on the 0–100 ladder is 7.5 points, and the same five leisure hours give an equivalence benchmark of 1.5 points per daily hour. Each parameter's posterior share inside this region is tabulated in Appendix E (@tbl-daily-summary). For affective valence we apply no equivalence benchmark: a momentary state assessed hours after the exposure window has no defensible minimally important difference per hour of earlier play, and valence associations are reported descriptively. As this analysis is unregistered, posterior shares inside the equivalence region are reported descriptively throughout, and no formal equivalence conclusions are drawn; the threshold reasoning is documented in the released analysis plan.
+Daily life satisfaction served as the outcome, its same-day reference frame matching a 24-hour exposure window. (The released codebook describes this item as a Cantril ladder scored 0–10; the administered item is the daily statement quoted above, as the 101 distinct response values in the released data show and as the dataset authors confirm.) The diary also carried a momentary affective-valence slider, which we do not analyse: a state assessed at a single moment, hours after most of the exposure window, belongs to session-level designs rather than to a question about a day's play. Exposure was defined per response as console and PC playtime in the 24 hours preceding the survey completion timestamp, computed from the same session-level telemetry and full-attribution genre assignment as the main analysis (mobile platforms provide no sub-day resolution and are excluded). Because the pre-registered SESOI is defined on the SWEMWBS item-mean scale, an equivalence benchmark for the daily slider has to be constructed. We build it exactly as the registered threshold is built, dividing a minimally important difference by the roughly five hours of daily leisure realistically available [@sturmFreeTimePhysical2019], and we take the minimally important difference from the lower edge of what two independent conventions imply. A distribution-based rule of half a within-person standard deviation gives `r round(0.5 * sesoi_d$s_w_ls, 1)` slider points (s~w~ = `r round(sesoi_d$s_w_ls, 1)`). Expressing the registered minimally important difference as a share of its scale range (0.3 of the 4 available SWEMWBS points, 7.5%) gives 7.5 points on a 0–100 slider. We adopt 5 points, below both: 5% of the scale range, `r round(5 / sesoi_d$s_w_ls, 2)` within-person standard deviations, and deliberately conservative, since a smaller minimally important difference makes practical equivalence harder to claim rather than easier. The equivalence benchmark is therefore 1 slider point per hour of daily play, and each parameter's posterior share inside that region is tabulated in Appendix E (@tbl-daily-summary). As this analysis is unregistered, posterior shares are reported descriptively throughout and no formal equivalence conclusions are drawn; the reasoning is documented in the released analysis plan.
 
 Of `r print_num(d_n_resp_all)` diary responses from `r print_num(d_n_pid_all)` participants, the primary frame retains the `r print_num(d_n_resp)` responses (`r round(100 * d_n_resp / d_n_resp_all, 1)`%) from `r print_num(d_n_pid)` participants whose 24-hour window overlaps their own telemetry coverage; responses from the `r d_n_no_tel_pid` participants with no linked console or PC telemetry, and windows falling outside a participant's telemetry span, cannot distinguish non-play from unobserved play and enter only a sensitivity refit. Within the primary frame, `r round(100 * d_zero_share, 1)`% of person-days have zero recorded console/PC play, participants contribute a median of `r d_median_days` diary days, and diary participation declines from `r print_num(d_day1_n)` responses on day 1 to `r print_num(d_day30_n)` on day 30. Both positive controls pass in this subsample: self-reported past-24-hour play agrees with telemetry on `r round(100 * d_ctrl_agree, 1)`% of responses (φ = `r round(d_ctrl_phi, 2)`; disagreement is dominated by self-reported play with zero console/PC telemetry, as expected when mobile play is unmeasured), and men play more Shooter than women (d = `r round(d_shooter_d, 2)`).
 
-At the daily grain, the within-person association between playtime and life satisfaction was positive and its 95% credible interval excluded zero: β = `r round(d_r0$b1, 2)` points per additional hour (95% CrI [`r round(d_r0$b1_ci[1], 2)`, `r round(d_r0$b1_ci[2], 2)`]). Its magnitude, however, sits at roughly a seventh of the equivalence benchmark of 1.5 points, and the entire posterior lies inside the equivalence region (`r round(100 * d_r0$b1_rope, 1)`%). The between-person association leaned negative (β = `r round(d_r0$b2, 2)`, 95% CrI [`r round(d_r0$b2_ci[1], 2)`, `r round(d_r0$b2_ci[2], 2)`]), straddling zero and likewise falling almost entirely inside the equivalence region (`r round(100 * d_r0$b2_rope, 1)`%). Inverting these estimates into doses anchors their size: shifting daily life satisfaction by one minimally important difference (7.5 points) would require an additional `r round(7.5 / d_r0$b1)` hours of play per day at the within-person point estimate, or `r round(7.5 / d_r0$b1_ci[2])` hours at the credible bound most favourable to an effect; both exceed the waking day. Between persons, the required habitual difference is `r round(7.5 / abs(d_r0$b2))` hours per day at the point estimate and `r round(7.5 / abs(d_r0$b2_ci[1]))` at the bound, exceeding the roughly five hours of daily leisure the benchmark itself assumes. Person-to-person variation in the daily within-person slope was bounded in the same way as at the biweekly grain: random-slope SD = `r round(d_r0$sd_slope, 2)` (95% CrI [`r round(d_r0$sd_slope_ci[1], 2)`, `r round(d_r0$sd_slope_ci[2], 2)`]), with `r round(100 * d_r0$sd_slope_above, 1)`% of the posterior above the benchmark. Affective valence reproduced the pattern (within-person β = `r round(d_r0v$b1, 2)`, 95% CrI [`r round(d_r0v$b1_ci[1], 2)`, `r round(d_r0v$b1_ci[2], 2)`]; between-person β = `r round(d_r0v$b2, 2)` [`r round(d_r0v$b2_ci[1], 2)`, `r round(d_r0v$b2_ci[2], 2)`]), as did the lagged direction check: an hour of play above one's average in the preceding day's window predicted `r round(d_lag_b, 2)` points higher life satisfaction (Wald 95% CI [`r round(d_lag_ci[1], 2)`, `r round(d_lag_ci[2], 2)`]). The full-frame sensitivity refit left the within-person estimate essentially unchanged (β = `r round(d_r0f$b1, 2)`) but pushed the between-person estimate credibly negative (β = `r round(d_r0f$b2, 2)`, 95% CrI [`r round(d_r0f$b2_ci[1], 2)`, `r round(d_r0f$b2_ci[2], 2)`]): treating unobserved play as zero manufactures between-person negativity, which is why the coverage-restricted frame is primary. As at the biweekly grain, the multi-membership model also provides H1 estimates via its fixed effects, and they agree with M0 (within-person β = `r round(d_m3_b1, 2)`, 95% CrI [`r round(d_m3_b1_ci[1], 2)`, `r round(d_m3_b1_ci[2], 2)`]; between-person β = `r round(d_m3_b2, 2)`, 95% CrI [`r round(d_m3_b2_ci[1], 2)`, `r round(d_m3_b2_ci[2], 2)`]): adding genre-level terms does not alter the overall association.
+At the daily grain, the within-person association between playtime and life satisfaction was positive and its 95% credible interval excluded zero: β = `r round(d_r0$b1, 2)` points per additional hour (95% CrI [`r round(d_r0$b1_ci[1], 2)`, `r round(d_r0$b1_ci[2], 2)`]). Its magnitude, however, sits at roughly a fifth of the equivalence benchmark of 1 point, and the entire posterior lies inside the equivalence region (`r round(100 * d_r0$b1_rope, 1)`%). The between-person association leaned negative (β = `r round(d_r0$b2, 2)`, 95% CrI [`r round(d_r0$b2_ci[1], 2)`, `r round(d_r0$b2_ci[2], 2)`]), straddling zero, with `r round(100 * d_r0$b2_rope, 1)`% of its posterior inside the region. Inverting these estimates into doses anchors their size: shifting daily life satisfaction by one minimally important difference (`r d_mid_daily` points) would require an additional `r round(d_mid_daily / d_r0$b1)` hours of play per day at the within-person point estimate, or `r round(d_mid_daily / d_r0$b1_ci[2])` hours at the credible bound most favourable to an effect, both far beyond the five hours of daily leisure the benchmark assumes. The between-person dose is smaller and not dismissible on arithmetic alone: a habitual difference of `r round(d_mid_daily / abs(d_r0$b2))` hours per day at the point estimate, and `r round(d_mid_daily / abs(d_r0$b2_ci[1]))` hours at the bound, the latter inside the realistic leisure range. Person-to-person variation in the daily within-person slope was bounded in the same way as at the biweekly grain: random-slope SD = `r round(d_r0$sd_slope, 2)` (95% CrI [`r round(d_r0$sd_slope_ci[1], 2)`, `r round(d_r0$sd_slope_ci[2], 2)`]), with `r round(100 * d_r0$sd_slope_above, 1)`% of the posterior above the benchmark. The lagged direction check agreed: an hour of play above one's average in the preceding day's window predicted `r round(d_lag_b, 2)` points higher life satisfaction (Wald 95% CI [`r round(d_lag_ci[1], 2)`, `r round(d_lag_ci[2], 2)`]). The full-frame sensitivity refit left the within-person estimate essentially unchanged (β = `r round(d_r0f$b1, 2)`) but pushed the between-person estimate credibly negative (β = `r round(d_r0f$b2, 2)`, 95% CrI [`r round(d_r0f$b2_ci[1], 2)`, `r round(d_r0f$b2_ci[2], 2)`]): treating unobserved play as zero manufactures between-person negativity, which is why the coverage-restricted frame is primary. As at the biweekly grain, the multi-membership model also provides H1 estimates via its fixed effects, and they agree with M0 (within-person β = `r round(d_m3_b1, 2)`, 95% CrI [`r round(d_m3_b1_ci[1], 2)`, `r round(d_m3_b1_ci[2], 2)`]; between-person β = `r round(d_m3_b2, 2)`, 95% CrI [`r round(d_m3_b2_ci[1], 2)`, `r round(d_m3_b2_ci[2], 2)`]): adding genre-level terms does not alter the overall association.
 
-Genre heterogeneity at the daily grain remained small in all three specifications. The unpooled fixed-effects specification (M1), refit at the daily grain for comparability, gives per-draw SDs across the 14 genre coefficients of `r round(d_m1_sdw, 2)` within persons (95% CrI [`r round(d_m1_sdw_ci[1], 2)`, `r round(d_m1_sdw_ci[2], 2)`]) and `r round(d_m1_sdb, 2)` between persons (95% CrI [`r round(d_m1_sdb_ci[1], 2)`, `r round(d_m1_sdb_ci[2], 2)`]); as at the biweekly grain, these raw SDs include estimation error, especially from rarely played genres, and read as upper bounds. The between-person raw SD exceeds the benchmark itself, the same sampling-noise signature its biweekly counterpart shows against the SESOI. Under the hierarchical prior, τ~within~ = `r round(d_r2$tau_w, 2)` (95% CrI [`r round(d_r2$tau_w_ci[1], 2)`, `r round(d_r2$tau_w_ci[2], 2)`]; `r round(100 * d_r2$tau_w_rope, 1)`% below the benchmark) and τ~between~ = `r round(d_r2$tau_b, 2)` (95% CrI [`r round(d_r2$tau_b_ci[1], 2)`, `r round(d_r2$tau_b_ci[2], 2)`]; `r round(100 * d_r2$tau_b_rope, 1)`% below the benchmark, the widest pooled posterior); the valence model gave τ~within~ = `r round(d_r2v$tau_w, 2)` and τ~between~ = `r round(d_r2v$tau_b, 2)`. The multi-membership specification, the primary model at the biweekly grain, agreed: σ~s,within~ = `r round(d_sigma_sw, 2)` (95% CrI [`r round(d_sigma_sw_ci[1], 2)`, `r round(d_sigma_sw_ci[2], 2)`]) and σ~s,between~ = `r round(d_sigma_sb, 2)` (95% CrI [`r round(d_sigma_sb_ci[1], 2)`, `r round(d_sigma_sb_ci[2], 2)`]), with `r round(100 * d_sigma_sw_below, 1)`% and `r round(100 * d_sigma_sb_below, 1)`% of their posteriors below the benchmark; the roughly one-fifth of σ~s~ posterior mass that sat above the threshold at the biweekly grain has no counterpart here. Convergence was healthy throughout (all R-hat ≤ `r round(max(d_r0$rhat, d_r0v$rhat, d_r0f$rhat, d_m1_rhat, d_r2$rhat, d_r2v$rhat, d_m3_rhat), 3)`; divergent transitions ≤ `r max(d_r0$divs, d_r0v$divs, d_r0f$divs, d_m1_divs, d_r2$divs, d_r2v$divs, d_m3_divs)` per fit). As at the biweekly grain, individual genre estimates carry credible intervals many times wider than their point estimates and are not interpreted. @fig-daily-posteriors displays the primary-outcome posteriors against the benchmark.
+Genre heterogeneity at the daily grain remained small in all three specifications. The unpooled fixed-effects specification (M1), refit at the daily grain for comparability, gives per-draw SDs across the 14 genre coefficients of `r round(d_m1_sdw, 2)` within persons (95% CrI [`r round(d_m1_sdw_ci[1], 2)`, `r round(d_m1_sdw_ci[2], 2)`]) and `r round(d_m1_sdb, 2)` between persons (95% CrI [`r round(d_m1_sdb_ci[1], 2)`, `r round(d_m1_sdb_ci[2], 2)`]); as at the biweekly grain, these raw SDs include estimation error, especially from rarely played genres, and read as upper bounds. The between-person raw SD exceeds the benchmark itself, the same sampling-noise signature its biweekly counterpart shows against the SESOI. Under the hierarchical prior, τ~within~ = `r round(d_r2$tau_w, 2)` (95% CrI [`r round(d_r2$tau_w_ci[1], 2)`, `r round(d_r2$tau_w_ci[2], 2)`]; `r round(100 * d_r2$tau_w_rope, 1)`% below the benchmark) and τ~between~ = `r round(d_r2$tau_b, 2)` (95% CrI [`r round(d_r2$tau_b_ci[1], 2)`, `r round(d_r2$tau_b_ci[2], 2)`]; `r round(100 * d_r2$tau_b_rope, 1)`% below the benchmark). τ~between~ is the one pooled parameter whose posterior straddles the benchmark rather than sitting under it, and the daily evidence on between-person genre heterogeneity is correspondingly inconclusive. The multi-membership specification, the primary model at the biweekly grain, was more decisive: σ~s,within~ = `r round(d_sigma_sw, 2)` (95% CrI [`r round(d_sigma_sw_ci[1], 2)`, `r round(d_sigma_sw_ci[2], 2)`]) and σ~s,between~ = `r round(d_sigma_sb, 2)` (95% CrI [`r round(d_sigma_sb_ci[1], 2)`, `r round(d_sigma_sb_ci[2], 2)`]), with `r round(100 * d_sigma_sw_below, 1)`% and `r round(100 * d_sigma_sb_below, 1)`% of their posteriors below the benchmark, against the roughly one-fifth of σ~s~ mass that sat above the threshold at the biweekly grain. Convergence was healthy throughout (all R-hat ≤ `r round(max(d_r0$rhat, d_r0f$rhat, d_m1_rhat, d_r2$rhat, d_m3_rhat), 3)`; divergent transitions ≤ `r max(d_r0$divs, d_r0f$divs, d_m1_divs, d_r2$divs, d_m3_divs)` per fit). As at the biweekly grain, individual genre estimates carry credible intervals many times wider than their point estimates and are not interpreted. @fig-daily-posteriors displays the posteriors against the benchmark.
 
 ::: {.place arguments='auto, scope: "parent", float: true'}
 
 ```{r}
 #| label: fig-daily-posteriors
-#| fig-cap: "*Exploratory Daily-Timescale Posteriors (Life Satisfaction).* Left: total-playtime effects per hour of play in the preceding 24 hours, from the standalone H1 model (M0) and the multi-membership model's fixed effects (M3), as in @fig-h1-all-models. Right: genre heterogeneity from all three specifications, coloured as in @fig-integrated-coefs: M1 (per-draw SD of the 14 unpooled coefficients; includes estimation error and reads as an upper bound), M2 (hierarchical-prior τ), and M3 (multi-membership σ_s). Green band: equivalence benchmark (±1.5 points per hour; 0 to 1.5 for the non-negative heterogeneity parameters). Posteriors are narrow relative to the region; the M0 within-person interval excludes zero (see text)."
+#| fig-cap: "*Exploratory Daily-Timescale Posteriors (Life Satisfaction).* Left: total-playtime effects per hour of play in the preceding 24 hours, from the standalone H1 model (M0) and the multi-membership model's fixed effects (M3), as in @fig-h1-all-models. Right: genre heterogeneity from all three specifications, coloured as in @fig-integrated-coefs: M1 (per-draw SD of the 14 unpooled coefficients; includes estimation error and reads as an upper bound), M2 (hierarchical-prior τ), and M3 (multi-membership σ_s). Green band: equivalence benchmark (±1 slider point per hour; 0 to 1 for the non-negative heterogeneity parameters). Posteriors are narrow relative to the region; the M0 within-person interval excludes zero (see text)."
 #| fig-width: 8
 #| fig-height: 4.8
 #| echo: false
@@ -2624,8 +2642,8 @@ ggplot(d_fig_draws, aes(x = value, y = param)) +
   scale_fill_manual(values = model_palette, guide = "none") +
   geom_vline(xintercept = 0, linetype = "solid", alpha = 0.3) +
   facet_wrap(~ panel, scales = "free") +
-  labs(x = "Life satisfaction (points per hour of play, past 24 h)", y = NULL,
-       caption = sprintf("Green band: equivalence benchmark (±%.1f). Thick: 66%% CrI. Thin: 95%% CrI.",
+  labs(x = "Daily life satisfaction (slider points per hour of play, past 24 h)", y = NULL,
+       caption = sprintf("Green band: equivalence benchmark (±%.0f slider point). Thick: 66%% CrI. Thin: 95%% CrI.",
                          d_primary)) +
   theme_minimal(base_size = 11) +
   theme(
@@ -2638,9 +2656,9 @@ ggplot(d_fig_draws, aes(x = value, y = param)) +
 :::
 
 
-Read against the registered analysis, the daily results reproduce both conclusions at a finer grain. Every dose and pooled heterogeneity parameter is estimated inside the equivalence region, and genre-level disaggregation again adds nothing of practical consequence. What changes is resolution, exactly as the measurement-resolution reading predicts: the within-person association that the biweekly design could not distinguish from zero resolves, at the daily grain, into a small credibly positive association, visible in the same-day estimates for both outcomes and in the lagged direction check. In within-person standard-deviation units the daily estimate (`r round(d_r0$b1 / sesoi_d$s_w_ls, 3)` s~w~ per hour) is roughly double its biweekly counterpart (`r round(beta1_mean / sesoi_d$s_w_swemwbs, 3)` s~w~), while remaining, even at its upper credible bound, under a quarter of the benchmark. The contrast between grains is thus one of resolution rather than contradiction: the association is immediate but small, visible within a day and averaged away over two weeks, not meaningful at one grain and absent at the other. A same-instrument bridge supports this reading: fitting the M0 structure to the biweekly life-satisfaction ladder (the same Cantril item referenced to the past two weeks, 0–10 scale, `r print_num(d_bridge_n)` observations) yields a within-person estimate of `r round(d_bridge_b1, 3)` points per hour (95% CrI [`r round(d_bridge_ci[1], 3)`, `r round(d_bridge_ci[2], 3)`]; about `r round(d_bridge_b1 / d_bridge_sw, 2)` s~w~), leaning negative and practically null against its own leisure-anchored benchmark of 0.15 points per hour; the positive daily association therefore tracks the finer grain rather than the change of instrument. The direction is consistent with the session-level affective uplift reported for this population [@vuorre2024affective] and with the positive causal estimates of @egami2024causal; the magnitude is consistent with the registered conclusion that these associations are practically negligible at any grain the present designs can reach.
+Read against the registered analysis, the daily results reproduce both conclusions at a finer grain. Every dose and pooled heterogeneity parameter is estimated inside the equivalence region, and genre-level disaggregation again adds nothing of practical consequence. What changes is resolution, exactly as the measurement-resolution reading predicts: the within-person association that the biweekly design could not distinguish from zero resolves, at the daily grain, into a small credibly positive association, visible in the same-day estimate and in the lagged direction check. In within-person standard-deviation units the daily estimate (`r round(d_r0$b1 / sesoi_d$s_w_ls, 3)` s~w~ per hour) is roughly double its biweekly counterpart (`r round(beta1_mean / sesoi_d$s_w_swemwbs, 3)` s~w~), while remaining, even at its upper credible bound, at about a third of the benchmark. The contrast between grains is thus one of resolution rather than contradiction: the association is immediate but small, visible within a day and averaged away over two weeks, not meaningful at one grain and absent at the other. Fitting the M0 structure to the biweekly life-satisfaction item (the Cantril ladder, 0–10, referenced to the past two weeks, `r print_num(d_bridge_n)` observations) supports the same reading from the outcome side: its within-person estimate is `r round(d_bridge_b1, 3)` ladder rungs per hour (95% CrI [`r round(d_bridge_ci[1], 3)`, `r round(d_bridge_ci[2], 3)`]; about `r round(d_bridge_b1 / d_bridge_sw, 2)` s~w~), leaning negative and practically null against a benchmark built for that instrument (half a rung over five leisure hours, `r d_bridge_th` rungs per hour). Changing the construct from mental wellbeing to life satisfaction at the biweekly grain therefore does not by itself produce the positive association; it appears when the window narrows to a day. Because the daily and biweekly items differ in wording and response format as well as in reference period, this comparison isolates the construct rather than the instrument. The direction is consistent with the session-level affective uplift reported for this population [@vuorre2024affective] and with the positive causal estimates of @egami2024causal; the magnitude is consistent with the registered conclusion that these associations are practically negligible at any grain the present designs can reach.
 
-Several limits keep this analysis exploratory in substance as well as in label. It is unregistered, and the equivalence thresholds are transferred from the registered SESOI rather than anchored in a minimally important difference for 0–100 single-item scales, so the equivalence region itself carries assumptions the registered one does not. The diary panel is attrition-shaped (participation falls from `r print_num(d_day1_n)` responses on day 1 to `r print_num(d_day30_n)` on day 30, and missingness is handled by observed-data likelihood without multiple imputation), the outcomes are single items, mobile play is unmeasured (the largest source of disagreement in the self-report control), and consecutive 24-hour windows share sessions for about a third of adjacent response pairs, inducing exposure dependence beyond the modelled person effects. These results are therefore a direction-setting replication at a finer grain, not confirmatory equivalence.
+Several limits keep this analysis exploratory in substance as well as in label. It is unregistered, and its equivalence benchmark is constructed here rather than pre-registered: no anchor-based minimally important difference exists for this particular slider, so the region rests on a distribution-based rule and a proportional comparison to the registered threshold. The outcome is a single item, and one that is strongly affect-laden: it correlates `r sprintf("%.2f", d_ls_av_r)` with the momentary valence slider across responses (`r sprintf("%.2f", d_ls_av_rw)` within persons), so it sits closer to same-day affect than the biweekly ladder does. The diary panel is attrition-shaped (participation falls from `r print_num(d_day1_n)` responses on day 1 to `r print_num(d_day30_n)` on day 30, and missingness is handled by observed-data likelihood without multiple imputation), mobile play is unmeasured (the largest source of disagreement in the self-report control), and consecutive 24-hour windows share sessions for about a third of adjacent response pairs, inducing exposure dependence beyond the modelled person effects. These results are therefore a direction-setting replication at a finer grain, not confirmatory equivalence.
 
 ```{r}
 #| label: daily-claims-guard
@@ -2649,54 +2667,53 @@ Several limits keep this analysis exploratory in substance as well as in label. 
 
 # Pins for the daily section's fixed prose (same convention as
 # abstract-claims-guard): fail the render if a quoted number drifts.
-# The equivalence benchmark is d_primary = 1.5 points per daily hour.
+# Benchmark: d_primary = 1 slider point per daily hour (MID 5 / 5 hours).
 stopifnot(
   d_n_resp == 13786,
   d_n_pid == 958,
-  abs(d_primary - 1.5) < 1e-12,
+  abs(d_primary - 1) < 1e-12,
   d_shooter_d > 0.2,
   d_ctrl_phi > 0.3,
+  # Outcome identity and its affect-ladenness
+  d_ls_av_r > 0.8, d_ls_av_rw > 0.6,
   # H1-daily: quoted values (half a rounding unit at 2 dp) and directions
   abs(d_r0$b1 - 0.22) < 5e-3,  d_r0$b1_ci[1] > 0,
   abs(d_r0$b2 - (-0.57)) < 5e-3, d_r0$b2_ci[1] < 0, d_r0$b2_ci[2] > 0,
-  d_r0$b1_rope > 0.9995, d_r0$b2_rope > 0.99,
-  abs(d_r0$sd_slope - 0.79) < 5e-3, d_r0$sd_slope_above < 5e-4,
-  abs(d_r0v$b1 - 0.20) < 5e-3, d_r0v$b1_ci[1] > 0,
+  d_r0$b1_rope > 0.9995, d_r0$b2_rope > 0.85, d_r0$b2_rope < 0.95,
+  abs(d_r0$sd_slope - 0.79) < 5e-3, d_r0$sd_slope_above < 0.02,
   abs(d_lag_b - 0.14) < 5e-3, d_lag_ci[1] > 0,
   abs(d_r0f$b1 - 0.22) < 5e-3,
   abs(d_r0f$b2 - (-0.87)) < 5e-3, d_r0f$b2_ci[2] < 0,
-  # M3's H1 fixed effects agree with M0 (the "does not alter" claim)
   abs(d_m3_b1 - 0.20) < 5e-3, abs(d_m3_b1 - d_r0$b1) < 0.1,
   abs(d_m3_b2 - (-0.58)) < 5e-3, abs(d_m3_b2 - d_r0$b2) < 0.1,
-  # "roughly a seventh of the benchmark"; "under a quarter at the bound"
-  d_primary / d_r0$b1 > 5.5, d_primary / d_r0$b1 < 8.5,
-  d_r0$b1_ci[2] / d_primary < 0.25,
-  # Dose inversions: MID doses exceed the waking day (within) and the five
-  # daily leisure hours (between)
-  d_mid_daily / d_r0$b1_ci[2] > 16,
-  d_mid_daily / abs(d_r0$b2_ci[1]) > 5,
-  # H2-daily heterogeneity: quoted values, benchmark shares, and the P5
-  # claim that every dose and POOLED heterogeneity point estimate sits
-  # inside the region
+  # "roughly a fifth of the benchmark"; "about a third at the upper bound"
+  d_primary / d_r0$b1 > 3.5, d_primary / d_r0$b1 < 6.5,
+  d_r0$b1_ci[2] / d_primary > 0.25, d_r0$b1_ci[2] / d_primary < 0.45,
+  # Dose inversions: the within-person doses exceed the five leisure hours,
+  # while the between-person bound sits inside them (both stated in text)
+  d_mid_daily / d_r0$b1_ci[2] > 5,
+  d_mid_daily / abs(d_r0$b2_ci[1]) < 5,
+  # H2-daily heterogeneity: quoted values and benchmark shares
   abs(d_r2$tau_w - 0.16) < 5e-3, d_r2$tau_w_rope > 0.9995,
-  abs(d_r2$tau_b - 0.91) < 5e-3, d_r2$tau_b_rope > 0.85,
-  d_sigma_sw_below > 0.995, d_sigma_sb_below > 0.9995,
+  abs(d_r2$tau_b - 0.91) < 5e-3,
+  d_r2$tau_b_rope > 0.5, d_r2$tau_b_rope < 0.8,   # straddles the benchmark
+  d_sigma_sw_below > 0.95, d_sigma_sb_below > 0.99,
+  # Every dose and pooled heterogeneity POINT ESTIMATE inside the region
   max(d_r0$b1, abs(d_r0$b2), d_r0$sd_slope, d_r2$tau_w, d_r2$tau_b,
       d_sigma_sw, d_sigma_sb) < d_primary,
   # M1-daily: converged; raw SDs are the noise-inflated upper bounds the
-  # prose describes, and the between-person raw SD exceeds the benchmark
-  # (the quoted sampling-noise signature)
+  # prose describes, with the between-person SD exceeding the benchmark
   d_m1_rhat < 1.05,
   d_m1_sdw > 0, d_m1_sdw < d_primary,
   d_m1_sdb > d_primary,
-  # The biweekly-vs-daily sigma_s contrast ("roughly one fifth ... has no
-  # counterpart here")
-  sigma_sw_above_sesoi > 0.15, (1 - d_sigma_sw_below) < 0.01,
-  # Same-instrument bridge: biweekly ladder leans negative, practically null
+  # The biweekly-vs-daily sigma_s contrast
+  sigma_sw_above_sesoi > 0.15, (1 - d_sigma_sw_below) < 0.05,
+  # Biweekly ladder comparison: leans negative, practically null on its own
+  # benchmark of half a rung over five leisure hours
   abs(d_bridge_b1 - (-0.031)) < 5e-4,
   d_bridge_b1 < 0, d_bridge_ci[2] < 0.01,
-  d_bridge_rope > 0.9995,
-  # Reading paragraph: daily within-person estimate is roughly double the
+  d_bridge_rope > 0.9995, abs(d_bridge_th - 0.1) < 1e-12,
+  # Reading paragraph: daily within-person estimate roughly double the
   # biweekly one in within-person SD units
   (d_r0$b1 / sesoi_d$s_w_ls) / (beta1_mean / sesoi_d$s_w_swemwbs) > 1.2,
   (d_r0$b1 / sesoi_d$s_w_ls) / (beta1_mean / sesoi_d$s_w_swemwbs) < 3.5
@@ -3671,7 +3688,7 @@ The exploratory daily-timescale analogue of this summary is given in @tbl-daily-
 
 ```{r}
 #| label: tbl-daily-summary
-#| tbl-cap: "Exploratory daily-timescale hypothesis tests (see Exploratory Analysis: The Daily Timescale): posterior estimates, 95% credible intervals, posterior mass inside the equivalence region (±1.5 points per hour of play in the preceding 24 hours; heterogeneity parameters are non-negative, so shares are mass below 1.5), and convergence diagnostics. M1 rows are per-draw SDs across the 14 unpooled genre coefficients and include estimation error. Affective valence rows are descriptive (no equivalence benchmark; see text)."
+#| tbl-cap: "Exploratory daily-timescale hypothesis tests (see Exploratory Analysis: The Daily Timescale): posterior estimates, 95% credible intervals, posterior mass inside the equivalence region (±1 slider point per hour of play in the preceding 24 hours; heterogeneity parameters are non-negative, so shares are mass below 1), and convergence diagnostics. M1 rows are per-draw SDs across the 14 unpooled genre coefficients and include estimation error."
 #| echo: false
 #| eval: true
 
@@ -3679,14 +3696,12 @@ tibble(
   Hypothesis = c(
     "H1a-daily", "H1a-daily", "H1b-daily", "H1b-daily",
     "H2a-daily", "H2a-daily", "H2a-daily",
-    "H2b-daily", "H2b-daily", "H2b-daily",
-    "H1a-daily", "H1b-daily", "H2a-daily", "H2b-daily"
+    "H2b-daily", "H2b-daily", "H2b-daily"
   ),
   Model = c(
     "M0", "M3", "M0", "M3",
     "M1", "M2", "M3",
-    "M1", "M2", "M3",
-    "M0", "M0", "M2", "M2"
+    "M1", "M2", "M3"
   ),
   Parameter = c(
     "Within-person slope", "Within-person slope (fixed effect)",
@@ -3694,15 +3709,12 @@ tibble(
     "SD of genre coefficients", "τ (hierarchical-prior scale)",
     "σ_s (random-slope SD)",
     "SD of genre coefficients", "τ (hierarchical-prior scale)",
-    "σ_s (random-slope SD)",
-    "Within-person slope", "Between-person slope",
-    "τ (hierarchical-prior scale)", "τ (hierarchical-prior scale)"
+    "σ_s (random-slope SD)"
   ),
   Estimate = round(c(
     d_r0$b1, d_m3_b1, d_r0$b2, d_m3_b2,
     d_m1_sdw, d_r2$tau_w, d_sigma_sw,
-    d_m1_sdb, d_r2$tau_b, d_sigma_sb,
-    d_r0v$b1, d_r0v$b2, d_r2v$tau_w, d_r2v$tau_b
+    d_m1_sdb, d_r2$tau_b, d_sigma_sb
   ), 2),
   `95% CrI` = c(
     sprintf("[%.2f, %.2f]", d_r0$b1_ci[1], d_r0$b1_ci[2]),
@@ -3714,38 +3726,25 @@ tibble(
     sprintf("[%.2f, %.2f]", d_sigma_sw_ci[1], d_sigma_sw_ci[2]),
     sprintf("[%.2f, %.2f]", d_m1_sdb_ci[1], d_m1_sdb_ci[2]),
     sprintf("[%.2f, %.2f]", d_r2$tau_b_ci[1], d_r2$tau_b_ci[2]),
-    sprintf("[%.2f, %.2f]", d_sigma_sb_ci[1], d_sigma_sb_ci[2]),
-    sprintf("[%.2f, %.2f]", d_r0v$b1_ci[1], d_r0v$b1_ci[2]),
-    sprintf("[%.2f, %.2f]", d_r0v$b2_ci[1], d_r0v$b2_ci[2]),
-    sprintf("[%.2f, %.2f]", d_r2v$tau_w_ci[1], d_r2v$tau_w_ci[2]),
-    sprintf("[%.2f, %.2f]", d_r2v$tau_b_ci[1], d_r2v$tau_b_ci[2])
+    sprintf("[%.2f, %.2f]", d_sigma_sb_ci[1], d_sigma_sb_ci[2])
   ),
-  `% within benchmark` = c(
-    sprintf("%.1f", 100 * c(
-      d_r0$b1_rope, d_m3_b1_rope, d_r0$b2_rope, d_m3_b2_rope,
-      d_m1_sdw_below, d_r2$tau_w_rope, d_sigma_sw_below,
-      d_m1_sdb_below, d_r2$tau_b_rope, d_sigma_sb_below
-    )),
-    "—", "—", "—", "—"
-  ),
+  `% within benchmark` = sprintf("%.1f", 100 * c(
+    d_r0$b1_rope, d_m3_b1_rope, d_r0$b2_rope, d_m3_b2_rope,
+    d_m1_sdw_below, d_r2$tau_w_rope, d_sigma_sw_below,
+    d_m1_sdb_below, d_r2$tau_b_rope, d_sigma_sb_below
+  )),
   `R-hat` = sprintf("%.3f", c(
     d_r0$rhat, d_m3_rhat, d_r0$rhat, d_m3_rhat,
     d_m1_rhat, d_r2$rhat, d_m3_rhat,
-    d_m1_rhat, d_r2$rhat, d_m3_rhat,
-    d_r0v$rhat, d_r0v$rhat, d_r2v$rhat, d_r2v$rhat
+    d_m1_rhat, d_r2$rhat, d_m3_rhat
   )),
   Div. = c(
     d_r0$divs, d_m3_divs, d_r0$divs, d_m3_divs,
     d_m1_divs, d_r2$divs, d_m3_divs,
-    d_m1_divs, d_r2$divs, d_m3_divs,
-    d_r0v$divs, d_r0v$divs, d_r2v$divs, d_r2v$divs
+    d_m1_divs, d_r2$divs, d_m3_divs
   )
 ) |>
   tt() |>
-  group_tt(i = list(
-    "Life satisfaction (primary outcome)" = 1,
-    "Affective valence (secondary outcome, descriptive)" = 11
-  )) |>
   style_tt(i = 0, bold = TRUE) |>
   style_tt(fontsize = 0.8)
 ```

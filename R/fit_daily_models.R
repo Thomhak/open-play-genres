@@ -1,13 +1,14 @@
-# Fit the exploratory daily-timescale models (see notes/analysis_plan_daily.md).
-# Prespecified: the SESOI transfer, prior scales, and model set are fixed by
-# the plan BEFORE any exposure-outcome model is estimated. This script
-# computes the transfer deterministically from observed marginals and fits
-# with file-based caching under models/daily/. Model constructions mirror the
+# Fit the exploratory daily-timescale models (see analysis_plan_daily.md).
+# Prespecified: the exposure window, prior scales, and model set were fixed
+# by the plan BEFORE any exposure-outcome model was estimated. The
+# within-person SD ratio computed here sets the (weakly informative) prior
+# scales; the equivalence benchmarks reported in the manuscript are derived
+# separately per instrument (see the plan). Fits cache under models/daily/. Model constructions mirror the
 # registered biweekly models in manuscript.qmd (M0 h1-fit, M2 h2-hier-fit,
 # M3 mm-formula-setup) with priors rescaled by r = SESOI_LS / 0.06.
 #
 # Usage: Rscript R/fit_daily_models.R mm     (M3 multi-membership, longest)
-#        Rscript R/fit_daily_models.R rest   (M0/M2 x both outcomes + lagged)
+#        Rscript R/fit_daily_models.R rest   (M0 + M0-full + M2 + lagged)
 # The two invocations are independent and can run concurrently.
 
 suppressPackageStartupMessages({
@@ -103,10 +104,8 @@ prior_b         <- sprintf("student_t(3, 0, %.3f)", b_scale)
 prior_intercept <- "student_t(3, 50, 25)"  # midpoint + half-range, as registered
 
 model_data_ls <- frame |> filter(!is.na(life_sat))
-model_data_av <- frame |> filter(!is.na(affective_valence))
-message(sprintf("Rows: life_sat %d, valence %d, pids %d",
-                nrow(model_data_ls), nrow(model_data_av),
-                n_distinct(frame$pid)))
+message(sprintf("Rows: life_sat %d, pids %d",
+                nrow(model_data_ls), n_distinct(frame$pid)))
 
 # ---- Model blocks ----------------------------------------------------------
 
@@ -132,10 +131,11 @@ if (which_block == "m1") {
 
 } else if (which_block == "bridge") {
 
-  # Same-instrument bridge: M0 structure on BIWEEKLY life satisfaction.
-  # Mirrors the registered M0 frame (full survey, zero-filled exposure, no
-  # coverage restriction): its purpose is comparability with the registered
-  # SWEMWBS analysis, holding the outcome instrument constant across grains.
+  # Biweekly life-satisfaction comparison: M0 structure on the biweekly
+  # Cantril ladder (0-10, past two weeks). NOTE this is a different item from
+  # the daily 0-100 slider, so it varies construct at fixed grain rather than
+  # holding the instrument constant. Mirrors the registered M0 frame (full
+  # survey, zero-filled exposure, no coverage restriction).
   bls <- read_csv(here("data/clean/survey_biweekly.csv.gz"),
                   show_col_types = FALSE) |>
     filter(wave >= 1, wave <= 6, !is.na(life_sat)) |>
@@ -198,20 +198,6 @@ if (which_block == "m1") {
   ))
   message("M0-daily (life_sat) done.")
 
-  # M0-daily, secondary outcome
-  message("Fitting M0-daily (valence)...")
-  invisible(brm(
-    bf(affective_valence ~ total_within + total_between + (1 + total_within | pid)),
-    data   = model_data_av,
-    prior  = set_prior(prior_b, class = "b") +
-             set_prior(prior_intercept, class = "Intercept"),
-    family = gaussian(),
-    chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
-    control = list(adapt_delta = 0.95),
-    file = here("models/daily/m0_daily_av"), file_refit = "never"
-  ))
-  message("M0-daily (valence) done.")
-
   # M0-daily sensitivity: full frame (all responses, structural zeros as-is)
   message("Fitting M0-daily full-frame sensitivity (life_sat)...")
   invisible(brm(
@@ -267,19 +253,6 @@ if (which_block == "m1") {
     file = here("models/daily/m2_daily_ls"), file_refit = "never"
   ))
   message("M2-daily (life_sat) done.")
-
-  message("Fitting M2-daily (valence)...")
-  invisible(brm(
-    bf(as.formula(paste("affective_valence ~", hier_rhs, "+ (1 | pid)"))),
-    data     = model_data_av,
-    prior    = hier_priors,
-    stanvars = sv_hier,
-    family   = gaussian(),
-    chains   = 4, iter = 8000, warmup = 4000, cores = 4, seed = 2025,
-    control  = list(adapt_delta = 0.999, max_treedepth = 15),
-    file = here("models/daily/m2_daily_av"), file_refit = "never"
-  ))
-  message("M2-daily (valence) done.")
 
   # Lagged direction check (frequentist): previous consecutive day's exposure.
   # Responses arrive at ~the same time daily, so the previous response's

@@ -219,6 +219,41 @@ both are disclosed in the manuscript text.
    (agree with M0); lowest-model-on-top ordering in all model figures;
    A5.2 rebuilt in A5.1's column scheme.
 
+5. OUTCOME IDENTITY CORRECTED (2026-07-30). The daily `life_sat` item is
+   NOT the Cantril ladder. The released codebook says "integer 0-10, Cantril
+   Self-Anchoring Scale", but the data hold 101 distinct integer values
+   0-100 (38.2% multiples of 10; granularity indistinguishable from
+   `affective_valence`, 36.5%). The dataset authors confirmed (open-play
+   issue #146) that the ladder was replaced for brevity by a simpler daily
+   statement, "I was satisfied with my life today", on a 0-100 slider, and
+   the codebook was not updated. Consequences applied here:
+   - The outcome is described correctly in the manuscript, with the codebook
+     discrepancy noted; no rescaling to ladder rungs (the ladder was never
+     administered daily).
+   - SESOI REDERIVED for a 0-100 daily slider: MID = 5 points, taken below
+     both the distribution-based half-within-SD rule (6.4 points) and the
+     registered MID expressed as a share of scale range (7.5 points);
+     benchmark = 5 / 5 leisure hours = 1.0 points per hour. Supersedes the
+     1.5 and 2.13 constructions above.
+   - The BIWEEKLY life_sat item IS the Cantril ladder (0-10 integers).
+     Its comparison model gets its own benchmark on that instrument:
+     MID = 0.5 rungs (half the smallest expressible increment; 5% of range,
+     matching the daily choice proportionally) over 5 leisure hours =
+     0.1 rungs per hour.
+   - The bridge is NO LONGER a "same-instrument" comparison: daily and
+     biweekly differ in item, wording, and response format. It now varies
+     construct at fixed grain (SWEMWBS vs life satisfaction) and is
+     described that way; it cannot isolate response format.
+   - VALENCE REMOVED entirely (author decision): fits deleted from
+     R/fit_daily_models.R, all rows/prose/guards removed. The cached
+     m0_daily_av / m2_daily_av fits remain on disk but are unreported.
+     Retained as a limitation: the daily outcome correlates r = .87 with the
+     valence slider (.68 within persons), so it is affect-laden.
+   - Consequence of the stricter benchmark, disclosed in text: M0's
+     between-person posterior is 90.8% inside (not "almost entirely"), and
+     M2's tau_between straddles it (62.1% below), so daily between-person
+     genre heterogeneity is reported as inconclusive.
+
 ## Out of scope (recorded so scope creep is visible)
 
 BPNSFS/BANGS needs, sleep, stressors, social context, displacement items;
