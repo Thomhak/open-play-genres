@@ -19,8 +19,8 @@ suppressPackageStartupMessages({
 })
 
 which_block <- commandArgs(trailingOnly = TRUE)[1]
-if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge", "m1")) {
-  stop("Argument must be 'mm', 'rest', 'bridge', or 'm1'")
+if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge", "m1", "dyn")) {
+  stop("Argument must be 'mm', 'rest', 'bridge', 'm1', or 'dyn'")
 }
 dir.create(here("models/daily"), showWarnings = FALSE, recursive = TRUE)
 
@@ -117,7 +117,55 @@ message(sprintf("Rows: life_sat %d, pids %d",
 
 # ---- Model blocks ----------------------------------------------------------
 
-if (which_block == "m1") {
+if (which_block == "dyn") {
+
+  # Two M0 sensitivities answering the intensive-longitudinal critiques of
+  # the primary specification (see analysis plan, amendment 7):
+  # (a) AR(1) residuals within person by day index, plus a within-person
+  #     linear day trend: guards the within-person interval against serial
+  #     dependence and shared 30-day drift. Day gaps from missed diaries
+  #     make the AR step size approximate; documented.
+  # (b) Window-length adjustment: hours of same-day exposure opportunity
+  #     vary with response time; adjusts for window_hours (within/between).
+  dyn_data <- model_data_ls |>
+    group_by(pid) |>
+    mutate(
+      day_w = day - mean(day),
+      wh_w  = window_hours - mean(window_hours),
+      wh_b  = mean(window_hours)
+    ) |>
+    ungroup()
+
+  message("Fitting M0-daily AR(1) + day-trend sensitivity...")
+  invisible(brm(
+    bf(life_sat ~ total_within + total_between + day_w +
+         ar(time = day, gr = pid, p = 1) +
+         (1 + total_within | pid)),
+    data   = dyn_data,
+    prior  = set_prior(prior_b, class = "b") +
+             set_prior(prior_intercept, class = "Intercept"),
+    family = gaussian(),
+    chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
+    control = list(adapt_delta = 0.95),
+    file = here("models/daily/m0_daily_ls_ar"), file_refit = "never"
+  ))
+  message("AR sensitivity done.")
+
+  message("Fitting M0-daily window-length sensitivity...")
+  invisible(brm(
+    bf(life_sat ~ total_within + total_between + wh_w + wh_b +
+         (1 + total_within | pid)),
+    data   = dyn_data,
+    prior  = set_prior(prior_b, class = "b") +
+             set_prior(prior_intercept, class = "Intercept"),
+    family = gaussian(),
+    chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
+    control = list(adapt_delta = 0.95),
+    file = here("models/daily/m0_daily_ls_wh"), file_refit = "never"
+  ))
+  message("Window-length sensitivity done.")
+
+} else if (which_block == "m1") {
 
   # M1-daily: unpooled fixed-effects genre specification (mirrors the
   # registered h2_genre_model), primary outcome only. Same prior family as

@@ -287,6 +287,36 @@ both are disclosed in the manuscript text.
      archived in models/daily/archive_window24h/. The bridge (biweekly) is
      unaffected.
 
+7. RESULTS INTEGRATION UNDER PRE-COMMITTED RULES (2026-07-31, overnight).
+   Wording rules and a branch tree for all result-dependent sentences were
+   fixed in the (unreleased, internal) integration plan BEFORE the same-day
+   posteriors were seen; two additional robustness fits were added on the
+   author's methods query: m0_daily_ls_ar (AR(1) by day within person +
+   within-person day trend; estimated AR(1) = 0.30) and m0_daily_ls_wh
+   (window-length adjustment). Outcomes and dispositions:
+   - Within-person: M0 +0.18 [0.01, 0.34] excludes zero at the edge; AR
+     holds the exclusion (+0.15 [0.00, 0.30]); window-length adjustment
+     loses it (+0.15 [-0.02, 0.31]). ONE DOCUMENTED RULE DEVIATION: the
+     precedence rule named only the AR refit as arbiter; because a named
+     robustness check overturned the exclusion, all claims OUTSIDE the
+     section adopt the cautious "suggestive, not decisively resolved"
+     language while the section reports the full pattern. Deviation
+     direction: strictly more cautious.
+   - Between-person: credibly negative and stable across M0/AR/WH
+     (~ -1.2 [-2.4, -0.02], ~35% inside the region), amplified in the
+     full frame (-1.88). Reported with the exposure-compression caveat
+     (per-hour units under truncated windows), the selection reading, and
+     WITHOUT any practical-null claim. The biweekly Cantril ladder's
+     between-person estimate (-0.117 rungs/h, 24% inside its region)
+     shows the same signature, so the departure tracks the
+     life-satisfaction construct across grains, not the same-day window.
+   - Genre heterogeneity: within bounded in all three specifications
+     (M1 raw SD 0.51, tau_w 0.13, sigma_sw 0.28); between mixed and
+     specification-dependent (tau_b 1.61 with 20% below vs sigma_sb 0.33
+     with 98% below; M1 raw SD 3.72 noise-inflated), stated as such.
+   - Diagnostics: all R-hat <= 1.02, divergences <= 6.
+   - Frame: 13,378 responses / 809 pids (degenerate <1 h windows excluded).
+
 ## Out of scope (recorded so scope creep is visible)
 
 BPNSFS/BANGS needs, sleep, stressors, social context, displacement items;

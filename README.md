@@ -44,7 +44,7 @@ renv.lock                       R dependency lockfile
 R/
   01_preprocess.R               Preprocessing pipeline (multi-genre full attribution)
   02_impute_wemwbs.R            Two-level MICE imputation of SWEMWBS on the person x wave grid
-  04_daily_aggregate.R          Daily diary exposure pipeline (24 h windows; exploratory analysis)
+  04_daily_aggregate.R          Daily diary exposure pipeline (same-day windows; exploratory analysis)
   fit_daily_models.R            Fits the exploratory daily models (caches to models/daily/)
   fit_sensitivity_models.R      Fits the demographic sensitivity models (caches to models/)
   helpers.R                     Table formatting utilities
