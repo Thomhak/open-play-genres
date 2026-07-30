@@ -213,7 +213,11 @@ both are disclosed in the manuscript text.
    between-SD exceeds the SESOI; reported with the registered caveat.
    (c) Daily summary table moved to Appendix E; model colours unified
    across all model-comparison figures (M1 blue #1f78b4, M2 orange
-   #ff8c00, M3 purple #6a3d9a from the per-genre figure; M0 steelblue).
+   #ff8c00, M3 purple #6a3d9a from the per-genre figure; M0 dark grey
+   #4d4d4d after the author flagged steelblue as too close to M1's blue).
+   (d) Round 2: M3's H1-daily fixed effects added to figure/prose/table
+   (agree with M0); lowest-model-on-top ordering in all model figures;
+   A5.2 rebuilt in A5.1's column scheme.
 
 ## Out of scope (recorded so scope creep is visible)
 
