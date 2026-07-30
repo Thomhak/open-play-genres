@@ -36,6 +36,7 @@ quarto render manuscript.qmd
 ```
 manuscript.qmd                  Main manuscript (introduction, methods, analysis, discussion)
 supplement_model_output.qmd     Supplement: full posterior summaries for the four Bayesian models
+analysis_plan_daily.md          Prespecified plan for the exploratory daily-timescale analysis
 bibliography.bib                References
 _quarto.yml                     Quarto project config
 Makefile                        Downloads data from Zenodo
@@ -43,6 +44,8 @@ renv.lock                       R dependency lockfile
 R/
   01_preprocess.R               Preprocessing pipeline (multi-genre full attribution)
   02_impute_wemwbs.R            Two-level MICE imputation of SWEMWBS on the person x wave grid
+  04_daily_aggregate.R          Daily diary exposure pipeline (24 h windows; exploratory analysis)
+  fit_daily_models.R            Fits the exploratory daily models (caches to models/daily/)
   fit_sensitivity_models.R      Fits the demographic sensitivity models (caches to models/)
   helpers.R                     Table formatting utilities
   sim_mm_recovery_report.qmd    Supplementary: multi-membership model simulation validation
