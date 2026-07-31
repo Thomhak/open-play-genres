@@ -10,9 +10,10 @@
 # Exposure windows (two per response):
 #   ANALYSIS ("today"): [4 a.m. local of the response's waking day, completion].
 #     Matches the outcome item's reference frame ("I was satisfied with my
-#     life today"). Local time is inferred per participant from the survey's
-#     2 p.m.-3 a.m. local availability window (see infer_utc_offsets).
-#     Window length therefore varies with response time (about 10-23 h).
+#     life today"). Local time comes from each participant's REPORTED
+#     timezone (intake local_timezone, a standard offset, DST-adjusted by
+#     date; see load_reported_offsets). Window length varies with response
+#     time (about 10-23 h).
 #   CONTROL (24 h): [completion - 24h, completion]. Retained ONLY for the
 #     played24hr positive control, whose self-report item asks about the past
 #     24 hours. Consecutive 24 h windows may overlap; today windows of
@@ -86,11 +87,6 @@ EPS_MINUTES <- 1e-6
 # the played24hr positive control, whose self-report item asks about the
 # past 24 hours.
 DAY_START_SECONDS <- 4L * 3600L
-# Candidate UTC offsets: US zones (with DST variants) and UK for the handful
-# of UK-flagged diary participants. Offsets are inferred per participant from
-# the survey's 2 p.m.-3 a.m. local availability window; a residual DST error
-# of one hour moves the 4 a.m. boundary to 3 or 5 a.m., where play is rare.
-OFFSET_CANDIDATES <- c(-4L, -5L, -6L, -7L, -8L, 0L, 1L)
 
 OUT_DIR <- here("data/processed/daily")
 
@@ -162,71 +158,65 @@ load_daily_survey <- function() {
   list(diary = diary, n_att_failed = n_att_failed)
 }
 
-#' Infer each participant's UTC offset from the survey availability window.
+#' Load reported participant timezones and compute availability diagnostics.
 #'
-#' Daily survey links opened at 2 p.m. local time and closed at 3 a.m., so a
-#' response's LOCAL clock time should fall in [14:00, 24:00) or [00:00, 03:00).
-#' Candidate offsets are restricted by intake country (US: UTC-4..-8;
-#' UK: UTC+0/+1; unknown: all), which prevents the availability constraint
-#' from assigning US participants to UTC+0. Among candidates the fewest
-#' availability violations wins; ties are broken by placing the participant's
-#' MEDIAN local completion hour closest to 19:30, the evening norm of
-#' decisively identified participants, which is far more stable for sparse
-#' responders than any single-response anchor. Participants whose best
-#' assignment still violates more than 20% of their responses are flagged
-#' tz_unreliable (their timestamps are inconsistent with the availability
-#' window under every candidate; a sensitivity refit excludes them). DST is
-#' not modelled; a one-hour residual error moves the 4 a.m. boundary to 3 or
-#' 5 a.m., where play is rare.
+#' The released intake carries self-reported `local_timezone` as a STANDARD
+#' offset string ("GMT-0500"); the data paper and the sleep study convert it
+#' with a DST adjustment by date and country, which is replicated here
+#' (in_dst()). UK participants with a missing report are imputed to GMT
+#' (single-zone country, sleep-study precedent); other missing reports are
+#' excluded via tz_missing. The 2 p.m.-3 a.m. availability window is used
+#' as a QUALITY CHECK only: participants whose responses violate it more
+#' than 20% of the time under their reported (DST-adjusted) offset are
+#' flagged tz_unreliable and excluded from the primary frame.
 #'
 #' @param diary tibble with pid and completion (UTC POSIXct)
-#' @return tibble: pid, utc_offset, n_viol, n_resp, tz_unreliable
-infer_utc_offsets <- function(diary) {
-  countries <- read_csv(here("data/clean/survey_intake.csv.gz"),
-                        show_col_types = FALSE) |>
-    select(pid, country)
-
-  hrs <- diary |>
-    mutate(utc_frac = as.numeric(completion) %% 86400 / 3600) |>
-    select(pid, utc_frac) |>
-    left_join(countries, join_by(pid))
-
-  per_offset <- map_dfr(OFFSET_CANDIDATES, function(off) {
-    hrs |>
-      mutate(
-        local_frac = (utc_frac + off) %% 24,
-        viol = !(local_frac >= 14 | local_frac < 3),
-        # hours after 14:00 local, so the median is not wrapped at midnight
-        since14 = (local_frac - 14) %% 24
-      ) |>
-      group_by(pid, country) |>
-      summarise(
-        utc_offset = off,
-        n_viol = sum(viol),
-        n_resp = n(),
-        med_since14 = median(since14),
-        .groups = "drop"
-      )
-  }) |>
-    filter(
-      case_when(
-        country %in% "US" ~ utc_offset <= -4,
-        country %in% "UK" ~ utc_offset >= 0,
-        TRUE ~ TRUE
-      )
+#' @return tibble: pid, rep_off, country, tz_missing, n_viol, n_resp,
+#'   tz_unreliable
+load_reported_offsets <- function(diary) {
+  intake <- read_csv(here("data/clean/survey_intake.csv.gz"),
+                     show_col_types = FALSE) |>
+    transmute(pid, country,
+      rep_off = case_when(
+        is.na(local_timezone) ~ NA_real_,
+        str_detect(local_timezone, "GMT[+-]") ~ {
+          sgn <- ifelse(str_detect(local_timezone, "GMT-"), -1, 1)
+          hrs <- as.numeric(substr(str_extract(local_timezone, "\\d{4}"), 1, 2))
+          sgn * hrs
+        },
+        TRUE ~ NA_real_
+      ),
+      rep_off = if_else(is.na(rep_off) & country == "UK", 0, rep_off)
     )
 
-  per_offset |>
-    group_by(pid) |>
-    mutate(best = n_viol == min(n_viol)) |>
-    summarise(
-      # 19:30 local is 5.5 h after the 14:00 link arrival
-      utc_offset = utc_offset[best][which.min(abs(med_since14[best] - 5.5))],
-      n_viol = min(n_viol),
-      n_resp = first(n_resp),
-      tz_unreliable = n_viol / n_resp > 0.2,
-      .groups = "drop"
-    )
+  diary |>
+    distinct(pid) |>
+    left_join(intake, join_by(pid)) |>
+    mutate(tz_missing = is.na(rep_off)) |>
+    left_join(
+      diary |>
+        left_join(intake, join_by(pid)) |>
+        filter(!is.na(rep_off)) |>
+        mutate(
+          off = rep_off + in_dst(completion, country),
+          local_frac = (as.numeric(completion) %% 86400 / 3600 + off) %% 24,
+          viol = !(local_frac >= 14 | local_frac < 3)
+        ) |>
+        group_by(pid) |>
+        summarise(n_viol = sum(viol), n_resp = n(), .groups = "drop"),
+      join_by(pid)
+    ) |>
+    mutate(tz_unreliable = !tz_missing & (n_viol / n_resp > 0.2))
+}
+
+#' DST indicator by date and country (US and UK rules, 2024-2025).
+in_dst <- function(t, country) {
+  d <- as.Date(t)
+  us <- (d >= as.Date("2024-03-10") & d < as.Date("2024-11-03")) |
+        (d >= as.Date("2025-03-09") & d < as.Date("2025-11-02"))
+  uk <- (d >= as.Date("2024-03-31") & d < as.Date("2024-10-27")) |
+        (d >= as.Date("2025-03-30") & d < as.Date("2025-10-26"))
+  ifelse(country %in% "UK", uk, us)
 }
 
 #' Attach both exposure windows to the diary.
@@ -240,8 +230,11 @@ infer_utc_offsets <- function(diary) {
 #'   window_hours, win24_start, win24_end
 add_windows <- function(diary, offsets) {
   diary |>
-    left_join(offsets, join_by(pid)) |>
+    left_join(offsets |> select(pid, rep_off, country, tz_missing,
+                                tz_unreliable), join_by(pid)) |>
+    filter(!tz_missing) |>
     mutate(
+      utc_offset = rep_off + in_dst(completion, country),
       local_epoch = as.numeric(completion) + utc_offset * 3600,
       day_anchor_local =
         floor((local_epoch - DAY_START_SECONDS) / 86400) * 86400 +
@@ -280,7 +273,16 @@ load_daily_sessions <- function(keep_pids) {
       ) |>
       filter(!is.na(session_start), !is.na(session_end), !is.na(minutes)) |>
       mutate(
-        span_minutes = as.numeric(difftime(session_end, session_start, units = "mins"))
+        span_minutes = as.numeric(difftime(session_end, session_start, units = "mins")),
+        # Xbox date-floored sessions: start recorded as exactly 00:00:00 UTC
+        # with the true time-of-day unknown (8.2% of Xbox rows; not midnight
+        # splits). Date-known/time-unknown is honoured by spreading minutes
+        # uniformly over the UTC day: span 1440 min, proportional clipping
+        # (the Steam rule). Flag carried so a sensitivity can exclude them.
+        floored = platform == "Xbox" &
+          format(session_start, "%H:%M:%S") == "00:00:00",
+        session_end = if_else(floored, session_start + 86400, session_end),
+        span_minutes = if_else(floored, 1440, span_minutes)
       )
   }
 
@@ -396,6 +398,7 @@ build_coverage_flags <- function(diary, span, flag_name = "covered") {
 #'   win_start, win_end, minutes, span_minutes, overlap_minutes, clipped_minutes
 clip_sessions_to_windows <- function(sessions, diary) {
   win_dt <- as.data.table(diary)[, .(pid, day, win_start, win_end)]
+  # (floored column travels with sessions through the interval join)
   setkey(win_dt, pid, win_start, win_end)
 
   ses_dt <- as.data.table(sessions)
@@ -421,7 +424,7 @@ clip_sessions_to_windows <- function(sessions, diary) {
   # Degenerate spans (zero or missing) fall back to counting `minutes` in full
   # when the session start lies inside the window.
   hits[, clipped_minutes := fifelse(
-    platform != "Steam",
+    platform != "Steam" & !floored,
     overlap_minutes,
     fifelse(
       is.na(span_minutes) | span_minutes <= 0,
@@ -438,10 +441,73 @@ clip_sessions_to_windows <- function(sessions, diary) {
 
   as_tibble(hits) |>
     select(
-      pid, day, platform, title_id,
+      pid, day, platform, title_id, floored,
       session_start, session_end, win_start, win_end,
       minutes, span_minutes, overlap_minutes, clipped_minutes
     )
+}
+
+# =============================================================================
+# Habitual full-day exposure (hybrid between-person terms)
+# =============================================================================
+
+#' Per-participant habitual daily play, in full-day hours.
+#'
+#' Numerator: telemetry minutes (all sessions, floored included; their dates
+#' are valid) whose start falls inside the overlap of the participant's diary
+#' span and telemetry span. Denominator: days in that overlap. The genre
+#' version applies the same restriction after the genre join (full
+#' attribution). These feed the BETWEEN-person terms of the hybrid
+#' decomposition; within-person terms remain same-day deviations.
+#'
+#' @return list(total = tibble(pid, habitual_daily_hours),
+#'   genre = tibble(pid, habitual_gh_* wide))
+compute_habitual <- function(sessions, diary, span, meta_long, all_genres) {
+  rng <- diary |>
+    group_by(pid) |>
+    summarise(d_first = min(win_start), d_last = max(win_end),
+              .groups = "drop") |>
+    inner_join(span |> filter(has_telemetry), join_by(pid)) |>
+    mutate(
+      lo = pmax(d_first, t_first),
+      hi = pmin(d_last, t_last),
+      n_days = pmax(1, as.numeric(difftime(hi, lo, units = "days")))
+    ) |>
+    filter(hi > lo) |>
+    select(pid, lo, hi, n_days)
+
+  in_rng <- sessions |>
+    inner_join(rng, join_by(pid)) |>
+    filter(session_start >= lo, session_start <= hi)
+
+  total <- in_rng |>
+    group_by(pid) |>
+    summarise(hab_min = sum(minutes), .groups = "drop") |>
+    right_join(rng |> select(pid, n_days), join_by(pid)) |>
+    mutate(habitual_daily_hours = replace_na(hab_min, 0) / 60 / n_days) |>
+    select(pid, habitual_daily_hours)
+
+  gh_cols <- genre_to_gh_col(all_genres)
+  genre <- in_rng |>
+    inner_join(meta_long |> select(original_name, platform, genre),
+               join_by(title_id == original_name, platform),
+               relationship = "many-to-many") |>
+    filter(!is.na(genre)) |>
+    group_by(pid, genre) |>
+    summarise(g_min = sum(minutes), .groups = "drop") |>
+    inner_join(rng |> select(pid, n_days), join_by(pid)) |>
+    mutate(col = paste0("habitual_", genre_to_gh_col(genre)),
+           g_hours = g_min / 60 / n_days) |>
+    select(pid, col, g_hours) |>
+    pivot_wider(names_from = col, values_from = g_hours, values_fill = 0)
+  for (cl in paste0("habitual_", gh_cols)) {
+    if (!cl %in% names(genre)) genre[[cl]] <- 0
+  }
+  genre <- rng |> select(pid) |>
+    left_join(genre, join_by(pid)) |>
+    mutate(across(starts_with("habitual_gh_"), ~ replace_na(.x, 0)))
+
+  list(total = total, genre = genre |> select(pid, sort(paste0("habitual_", gh_cols))))
 }
 
 # =============================================================================
@@ -829,20 +895,28 @@ daily_aggregate <- function() {
     sum(is.na(diary$life_sat)), sum(is.na(diary$affective_valence))
   ))
 
-  # --- Local-time inference and windows ---
-  message("Inferring UTC offsets from the 2 p.m.-3 a.m. availability window...")
-  offsets <- infer_utc_offsets(diary)
-  off_tab <- offsets |> count(utc_offset) |> arrange(utc_offset)
+  # --- Reported timezones and windows ---
+  message("Loading reported timezones (intake local_timezone, DST-adjusted)...")
+  offsets <- load_reported_offsets(diary)
+  off_tab <- offsets |> filter(!tz_missing) |> count(rep_off) |> arrange(rep_off)
   for (i in seq_len(nrow(off_tab))) {
-    message(sprintf("  UTC%+d: %5d participants",
-                    off_tab$utc_offset[i], off_tab$n[i]))
+    message(sprintf("  standard UTC%+d: %5d participants",
+                    off_tab$rep_off[i], off_tab$n[i]))
   }
   message(sprintf(
-    "  tz_unreliable (>20%% violating responses): %d participants; any violation: %d\n",
-    sum(offsets$tz_unreliable), sum(offsets$n_viol > 0)
+    "  tz_missing (no reported timezone, excluded): %d participants",
+    sum(offsets$tz_missing)
   ))
+  message(sprintf(
+    "  tz_unreliable (>20%% availability violations): %d participants; overall violation share %.2f%%\n",
+    sum(offsets$tz_unreliable, na.rm = TRUE),
+    100 * sum(offsets$n_viol, na.rm = TRUE) / sum(offsets$n_resp, na.rm = TRUE)
+  ))
+  viol_share <- sum(offsets$n_viol, na.rm = TRUE) / sum(offsets$n_resp, na.rm = TRUE)
+  stopifnot("availability violations outside expected band (5-8%)" =
+              viol_share > 0.05 & viol_share < 0.08)
 
-  diary <- add_windows(diary, offsets |> select(pid, utc_offset, tz_unreliable))
+  diary <- add_windows(diary, offsets)
   stopifnot(
     "window_hours out of range" =
       all(diary$window_hours > 0 & diary$window_hours <= 24 + 1e-9),
@@ -896,15 +970,23 @@ daily_aggregate <- function() {
   # --- Totals ---
   message("Aggregating total playtime per response...")
   totals_today <- aggregate_total(clipped, "total_hours_today")
+  totals_xfl   <- aggregate_total(clipped |> filter(!floored),
+                                  "total_hours_today_xfl")
   totals_24h   <- aggregate_total(clipped24, "total_hours_24h")
+  n_floored_alloc <- clipped |> filter(floored) |> nrow()
+  message(sprintf(
+    "  floored Xbox allocations into windows: %d session x response rows\n",
+    n_floored_alloc))
 
   diary_analysis <- diary |>
     select(pid, day, completion, utc_offset, tz_unreliable, window_hours,
            life_sat, affective_valence, played24hr) |>
     left_join(totals_today, join_by(pid, day)) |>
+    left_join(totals_xfl, join_by(pid, day)) |>
     left_join(totals_24h, join_by(pid, day)) |>
     mutate(
       total_hours_today = replace_na(total_hours_today, 0),
+      total_hours_today_xfl = replace_na(total_hours_today_xfl, 0),
       total_hours_24h = replace_na(total_hours_24h, 0)
     ) |>
     arrange(pid, day)
@@ -989,11 +1071,39 @@ daily_aggregate <- function() {
       !any(is.na(model_frame[, grep("^gh_", names(model_frame))]))
   )
 
+  # --- Habitual full-day exposure (hybrid between-person terms) ---
+  message("Computing habitual full-day exposures...")
+  span_pre <- compute_telemetry_span(sessions)
+  habitual <- compute_habitual(sessions, diary, span_pre, meta_long,
+                               reference_genres)
+  model_frame <- model_frame |>
+    left_join(habitual$total, join_by(pid)) |>
+    left_join(habitual$genre, join_by(pid))
+  message(sprintf(
+    "  habitual_daily_hours: n pids %d | mean %.2f | median %.2f | p90 %.2f",
+    sum(!is.na(distinct(model_frame, pid, habitual_daily_hours)$habitual_daily_hours)),
+    mean(habitual$total$habitual_daily_hours),
+    median(habitual$total$habitual_daily_hours),
+    quantile(habitual$total$habitual_daily_hours, 0.9)))
+
+  # Validation: habitual hours must track the registered biweekly pipeline
+  reg <- read_csv(here("data/processed/total_playtime.csv"),
+                  show_col_types = FALSE) |>
+    group_by(pid) |>
+    summarise(reg_daily = mean(total_hours_per_day), .groups = "drop")
+  vv <- habitual$total |> inner_join(reg, join_by(pid))
+  r_reg <- cor(vv$habitual_daily_hours, vv$reg_daily)
+  message(sprintf(
+    "  validation: cor(habitual, registered biweekly per-pid playtime) = %.3f (n = %d)\n",
+    r_reg, nrow(vv)))
+  stopifnot("habitual measure does not track registered pipeline (r <= 0.8)" =
+              r_reg > 0.8)
+
   # --- Telemetry coverage flags ---
   # Appended last in both frames so the exposure and outcome columns keep their
   # existing positions and values.
   message("Flagging telemetry coverage...")
-  span <- compute_telemetry_span(sessions)
+  span <- span_pre
   coverage <- build_coverage_flags(diary, span, "covered")
   coverage24 <- build_coverage_flags(diary24, span, "covered24") |>
     select(pid, day, covered24)

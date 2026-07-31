@@ -31,19 +31,26 @@ raw_frame <- read_csv(here("data/processed/daily/daily_model_frame.csv"),
 gh_cols <- sort(grep("^gh_", names(raw_frame), value = TRUE))
 stopifnot(length(gh_cols) == 14, "covered" %in% names(raw_frame))
 
-# Within-between decomposition on the analysis frame. Raw gh_ columns are
-# kept for the mm() weights; _w/_b suffixes carry the decomposition.
+# HYBRID within-between decomposition (analysis plan, amendment 8c):
+# within-person terms are deviations from the person's same-day mean;
+# between-person terms are HABITUAL FULL-DAY hours from the pipeline
+# (habitual_daily_hours, habitual_gh_*), keeping habitual contrasts in
+# daily-hour units comparable with the benchmark and the registered
+# analysis. Raw gh_ columns are kept for the mm() weights.
 decompose <- function(df) {
-  df |>
+  out <- df |>
     group_by(pid) |>
     mutate(
       total_within  = total_hours_today - mean(total_hours_today, na.rm = TRUE),
-      total_between = mean(total_hours_today, na.rm = TRUE),
+      total_between = habitual_daily_hours,
       across(all_of(gh_cols),
-             list(w = ~ .x - mean(.x, na.rm = TRUE),
-                  b = ~ mean(.x, na.rm = TRUE)))
+             list(w = ~ .x - mean(.x, na.rm = TRUE)))
     ) |>
     ungroup()
+  for (g in gh_cols) {
+    out[[paste0(g, "_b")]] <- out[[paste0("habitual_", g)]]
+  }
+  out
 }
 
 # Primary frame (see analysis plan): telemetry-covered responses from
@@ -51,7 +58,8 @@ decompose <- function(df) {
 # degenerate windows shorter than one hour. The full frame (all responses)
 # is retained for the M0 sensitivity refit and spans both relaxations.
 frame      <- decompose(raw_frame |>
-                          filter(covered, !tz_unreliable, window_hours >= 1))
+                          filter(covered, !tz_unreliable, window_hours >= 1,
+                                 !is.na(habitual_daily_hours)))
 frame_full <- decompose(raw_frame)
 message(sprintf("Excluded from primary: %d uncovered, %d tz-unreliable, %d degenerate windows",
                 sum(!raw_frame$covered),
@@ -268,6 +276,27 @@ if (which_block == "dyn") {
   ))
   message("M0-daily full-frame sensitivity done.")
 
+  # Sensitivity: exclude Xbox date-floored sessions from same-day exposure
+  # (analysis plan 8b); habitual between term unchanged (dates are valid).
+  message("Fitting M0-daily exclude-floored sensitivity...")
+  xfl_data <- frame |>
+    group_by(pid) |>
+    mutate(xfl_within = total_hours_today_xfl -
+             mean(total_hours_today_xfl, na.rm = TRUE)) |>
+    ungroup() |>
+    filter(!is.na(life_sat))
+  invisible(brm(
+    bf(life_sat ~ xfl_within + total_between + (1 + xfl_within | pid)),
+    data   = xfl_data,
+    prior  = set_prior(prior_b, class = "b") +
+             set_prior(prior_intercept, class = "Intercept"),
+    family = gaussian(),
+    chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
+    control = list(adapt_delta = 0.95),
+    file = here("models/daily/m0_daily_ls_xfl"), file_refit = "never"
+  ))
+  message("Exclude-floored sensitivity done.")
+
   # M2-daily: hierarchical prior over genre coefficients (mirrors h2-hier-fit)
   sv_hier <- stanvar(
     scode = "real<lower=0> tau_genre_within;\nreal<lower=0> tau_genre_between;",
@@ -305,8 +334,9 @@ if (which_block == "dyn") {
     stanvars = sv_hier,
     family   = gaussian(),
     chains   = 4, iter = 8000, warmup = 4000, cores = 4, seed = 2025,
-    control  = list(adapt_delta = 0.999, max_treedepth = 15),
-    file = here("models/daily/m2_daily_ls"), file_refit = "never"
+    # One documented escalation (analysis plan 5): 16 divergences at 0.999
+    control  = list(adapt_delta = 0.9995, max_treedepth = 15),
+    file = here("models/daily/m2_daily_ls_v2"), file_refit = "never"
   ))
   message("M2-daily (life_sat) done.")
 
@@ -354,16 +384,16 @@ if (which_block == "dyn") {
               class = "sd", group = mm_groups[1])
   )
 
-  # Registered mm used iter 8000 / adapt_delta 0.999; the daily frame is 2.4x
-  # larger, so the exploratory pass starts at iter 4000 / adapt_delta 0.995
-  # (documented de-escalation; escalate only if diagnostics fail).
+  # Registered iterations (8000/4000): at 4000 the bulk-ESS of
+  # b_total_between fell below the ~400 convention (371); adapt_delta 0.995
+  # retained (zero divergences previously; ESS, not geometry, was the issue).
   message("Fitting M3-daily mm (life_sat)...")
   invisible(brm(
     formula = mm_formula,
     data    = mm_data,
     prior   = mm_priors,
     family  = gaussian(),
-    chains  = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
+    chains  = 4, iter = 8000, warmup = 4000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.995, max_treedepth = 15),
     file = here("models/daily/m3_daily_mm_ls"), file_refit = "never"
   ))

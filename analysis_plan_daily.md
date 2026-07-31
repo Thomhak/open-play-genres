@@ -317,6 +317,68 @@ both are disclosed in the manuscript text.
    - Diagnostics: all R-hat <= 1.02, divergences <= 6.
    - Frame: 13,378 responses / 809 pids (degenerate <1 h windows excluded).
 
+8. OPTION B REBUILD (2026-07-31, author-approved spec; this entry written
+   BEFORE the rebuilt results were seen). Components:
+   (a) TIMEZONES: reported `local_timezone` from the released intake
+       (standard offsets, "GMT-0500" style) + DST adjustment by date and
+       country, matching the data paper's get_dst_offset and the sleep
+       repo; UK-NA imputed to GMT; participants with no reported timezone
+       EXCLUDED; availability-QC flag (>20% of responses outside the
+       2 p.m.-3 a.m. local window) EXCLUDED from the primary frame. The
+       2026-07-30 completion-time inference is retired (39% of kept pids
+       had wrong zones vs reported; results built on it were discarded).
+   (b) XBOX DATE-FLOORED SESSIONS (8.2% of Xbox sessions start at exactly
+       00:00:00 UTC; not midnight splits, 0.4% pairing): treated as
+       date-known/time-unknown by spreading minutes uniformly over their
+       UTC day (span = 1440 min, Steam-style proportional clipping);
+       M0 sensitivity EXCLUDING them entirely. Upstream provenance
+       question added to the Nick ledger.
+   (c) HYBRID DECOMPOSITION (primary): within-person terms remain
+       deviations from the person's same-day mean; between-person terms
+       become HABITUAL FULL-DAY hours (total telemetry minutes within the
+       overlap of the diary span and telemetry span, divided by days;
+       genre analogues likewise), restoring daily-hour units comparable
+       with the benchmark, the registered biweekly analysis, and the
+       bridge. mm() composition weights stay same-day.
+   (d) mm at the registered 8000/4000 iterations (bulk-ESS 371 on
+       b_total_between at 4000 was below the ~400 convention);
+       adapt_delta 0.995 retained (0 divergences; ESS, not geometry, was
+       the issue). All other fits unchanged settings.
+   PRE-STATED EXPECTATIONS (falsifiable, logged before fitting): within
+   ~ +0.15 to +0.18 and still fragile; hybrid between ~ -0.4 to -0.6 per
+   daily hour IF the previous -1.25 was compression-scaled; tau_between
+   shrinks by a similar factor. Any between estimate outside [-0.8, -0.2]
+   will be flagged as a surprise in the summary rather than silently
+   absorbed. Validation checks pre-committed: rebuilt offsets match the
+   reported distribution; availability violations ~6.5%; habitual daily
+   hours correlate strongly (r > 0.8 expected) with the registered
+   biweekly pipeline's per-pid playtime.
+
+9. OPTION B OUTCOMES (2026-07-31, written at integration). Predictions
+   from amendment 8 versus observations:
+   - Hybrid between: predicted -0.4..-0.6 -> observed -0.43 [-1.11, 0.27].
+     In band; the compression account of the earlier -1.25 is CONFIRMED.
+     The sign is no longer credible; per the share rules the between-person
+     estimate is a negative lean with 94.9% of its posterior inside the
+     region, echoing the registered biweekly pattern. The "departure"
+     framing was retired throughout (abstract, Discussion, section).
+   - Within: +0.18 with the lower CrI bound at zero; AR(1) and
+     window-length refits widen past zero, exclude-floored does not ->
+     "suggestive rather than resolved" language retained everywhere.
+   - tau_between: 1.61 -> 0.84 (67.3% below; "straddles"); sigma_s,between
+     0.19 (99.5% below); within-person heterogeneity bounded in all three
+     specifications. M1 raw between SD 2.37 (noise ceiling).
+   - mm at 8000 iterations: min key bulk-ESS 371 -> 877, zero divergences.
+   - M2 escalation (0.999 -> 0.9995) did NOT remove divergences (16 -> 18,
+     estimates stable to 0.01); per the protocol the failure is DISCLOSED
+     in text (18/16,000 draws, 0.1%) rather than chased further; the
+     escalated fit (m2_daily_ls_v2) is the reported artifact.
+   - Frame: 13,039 responses / 763 participants (46 further excluded for
+     unavailable habitual estimates; disclosed).
+   - The biweekly ladder's between-person estimate (-0.117 rungs/h, 24%
+     inside its region) is now the one credibly negative quantity in the
+     family; the section hands it to the registered follow-up explicitly.
+
 ## Out of scope (recorded so scope creep is visible)
 
 BPNSFS/BANGS needs, sleep, stressors, social context, displacement items;
