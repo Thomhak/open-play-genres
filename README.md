@@ -36,7 +36,6 @@ quarto render manuscript.qmd
 ```
 manuscript.qmd                  Main manuscript (introduction, methods, analysis, discussion)
 supplement_model_output.qmd     Supplement: full posterior summaries for the four Bayesian models
-analysis_plan_daily.md          Prespecified plan for the exploratory daily-timescale analysis
 bibliography.bib                References
 _quarto.yml                     Quarto project config
 Makefile                        Downloads data from Zenodo

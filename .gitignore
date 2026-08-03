@@ -67,8 +67,9 @@ manuscript_prereg.typ
 # Local backup of an earlier draft (kept on disk, not published)
 manuscript copy.qmd
 
-# Working notes (local only)
+# Working notes and analysis plans (local only)
 notes/
+analysis_plan_daily.md
 
 # Internal dev/agent notes (local only)
 .internal/

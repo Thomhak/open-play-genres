@@ -1,4 +1,5 @@
-# Fit the exploratory daily-timescale models (see analysis_plan_daily.md).
+# Fit the exploratory daily-timescale models (see notes/analysis_plan_daily.md,
+# local working docs).
 # Prespecified: the exposure window, prior scales, and model set were fixed
 # by the plan BEFORE any exposure-outcome model was estimated. The
 # within-person SD ratio computed here sets the (weakly informative) prior
@@ -53,10 +54,10 @@ decompose <- function(df) {
   out
 }
 
-# Primary frame (see analysis plan): telemetry-covered responses from
+# Analysed sample (see analysis plan): telemetry-covered responses from
 # participants with reliable timezone inference, excluding structurally
-# degenerate windows shorter than one hour. The full frame (all responses)
-# is retained for the M0 sensitivity refit and spans both relaxations.
+# degenerate windows shorter than one hour. All responses are retained
+# for the M0 sensitivity refit, which spans both relaxations.
 frame      <- decompose(raw_frame |>
                           filter(covered, !tz_unreliable, window_hours >= 1,
                                  !is.na(habitual_daily_hours)))
