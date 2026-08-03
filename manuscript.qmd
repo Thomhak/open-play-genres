@@ -126,6 +126,7 @@ format:
 ---
 
 # Introduction
+
 Video game effects research utilising digital trace data often focuses on a single game or a handful of games to understand the psychological processes and outcomes of digital play [@bruhlmannMotivationalProfilingLeague2020; @JohannesEtAl2021video; @larrieuHowGamingMotives2023; @ballouPerceivedValueVideo2025]. While understandable given the limited resources and lack of objective data available to independent researchers, it has left the field guessing whether identified relationships are unique to the studied titles or whether they apply universally across games. This limitation has restricted researchers' abilities to estimate the true prevalence of any found effects, leading to assumptions of generalisability and the formation of theories that fail to capture the diversity of the medium. Potential overgeneralisation of findings has been well-documented in psychological research and is particularly pertinent to research on video games [@yarkoniGeneralizabilityCrisis2019].
 
 With more than 10,000 new games released each year [@notisYoureRightThere2021], an accessible classification system is essential for studying and comparing video games at scale. Genres, while defined by convention and neither exclusive nor exhaustive as labels [@clarkeWhyVideoGame2017; @ballouHowVideoGames2025; @vargas-iglesiasMakingSenseGenre2020], remain the most pragmatic means of categorising video games, providing utility for researchers, players, industry, and policymakers alike. Psychologists have been trying to classify game genres for decades [@griffithsAreComputerGames1993; @wolf6GenreVideo2002], but must negotiate challenges in definition, overlaps between genres, and the continuous evolution of genres as new games are released. Genres are therefore best treated not as definitive taxonomical statements but as crude yet practical tools for organising a growing and diversifying library.
@@ -137,6 +138,7 @@ A recent systematic review, however, documented inconsistencies in how genres ar
 Structured, crowd-sourced metadata repositories such as SteamDB, The Games Database, and the Internet Games Database (IGDB) offer a more reliable alternative, involving both game developers and large player samples in collaboratively maintaining genre labels [@liPreliminaryNetworkAnalysis2020; @starostaTangledWaysClassify2024; @leeEmpiricalEvaluationMetadata2015]. This approach accommodates the fluidity of genres over time [@cohenHistoryGenre1986] and enables comparative research at scale. Yet several methodological obstacles have prevented genre-level research using digital trace data. Data access is fragmented: digital trace data are siloed within individual platform holders, and no cross-platform standard exists for recording or sharing gameplay telemetry [@zendle2023challenges]. The choice of taxonomy is also not neutral: genre labels conflate distinct facets of games, such as gameplay style, purpose, and mood [@leeFacetAnalysisVideo2014]; treating players as pure-genre versus acknowledging multi-genre play alters conclusions about player characteristics [@aziziExperienceMultigenreVideo2018], and factor-analytic decompositions of crowd-sourced game tags produce genre structures that diverge from conventional labels [@liFactororientedUnderstandingVideo2020].
 
 ## The Present Study
+
 In sum, one portion of the literature has shown that playtime undifferentiated by genre is not a meaningful predictor of wellbeing, using data from both specific games [@larrieuHowGamingMotives2023] and platforms [@ballouRegisteredReportEvidence2024; @ballouPerceivedValueVideo2025]. This relationship, however, has not yet been tested using comprehensive multi-platform play data. Furthermore, multiple mechanisms have been proposed to explain why aggregate playtime is poorly predictive of wellbeing, including displacement of beneficial activities, satisfaction or frustration of basic psychological needs, and selection effects whereby individuals with lower wellbeing play more [@ballouHowVideoGames2025]. Most proposed mechanisms operate at the level of game features or player experience rather than at the level of total time spent; playtime is, at best, a moderator [@ballouHowVideoGames2025]. The only causal evidence to date, exploiting console lotteries as a natural experiment, found positive effects of gaming on wellbeing, with heterogeneous effects by console type [@egami2024causal], suggesting that observational null findings may reflect confounding rather than absence of effect. Thus, our first hypothesis predicts the absence of a meaningful relationship, this time with digital trace data across several platforms and thousands of games:
 
 **H1.** Total cross-platform playtime is not meaningfully associated with fluctuations in general mental wellbeing over a 2-week period (**H1a**, "within-person") or with average wellbeing over the full study period (**H1b**, "between-person").
@@ -148,6 +150,8 @@ Consistent null findings for the effects of playtime on wellbeing have generated
 **H2.** Genres differ in how playtime relates to fluctuations in general mental wellbeing over a 2-week period (**H2a**, "within-person") and to average wellbeing over the full study period (**H2b**, "between-person").
 
 H2a asks: when a participant plays more than their own average this wave, does it matter what genres that extra playtime is in? H2b asks the between-person complement: among people who play more overall, does it matter whether that habitual extra playtime is concentrated in RPGs versus Shooters versus other genres? If H2 is supported, and genre-specific associations differ from one another, it would provide a candidate explanation for the consistent null aggregate findings: undifferentiated playtime measures may average over heterogeneous genre effects that cancel in aggregate. H2 thus tests whether it is justified to generalise video game effects across genres, testing the generalisability that single-title studies must assume [@yarkoniGeneralizabilityCrisis2019]. Taken together, the two hypotheses form a single generalisability test rather than two separate null results: H1 establishes whether an aggregate association exists, and H2 establishes whether that aggregate conceals genre-level associations that offset one another. The generalisability critique is widely cited but rarely operationalised as a quantity a study can estimate; here it is the quantity being estimated.
+
+Beyond the registered hypotheses, we report one unregistered extension. The biweekly window aggregates many individual play sessions into a single retrospective judgement, so the registered tests leave open whether associations operating on shorter timescales are hidden by aggregation; the daily-diary component of the Open Play study allows both hypotheses to be re-examined at the daily grain. This extension was specified after the registered analyses were complete and is reported as exploratory throughout (see Exploratory Daily-Timescale Analysis in Methods).
 
 # Methods
 
@@ -798,8 +802,7 @@ seg_df <- int_genres |>
   )
 ```
 
-::: {.place arguments='top, scope: "parent", float: true'}
-
+::: {.place arguments="top, scope: \"parent\", float: true"}
 ```{r}
 #| label: fig-genre-upset
 #| fig-cap: "*Genre Co-Occurrence Weighted by Total Playtime.* Top panel: total hours played by games in each genre combination, ordered by playtime. Bottom panel: dot matrix indicating which genres belong to each combination; connected dots denote multi-genre games. Left bars show total hours attributed to each genre, counting a multi-genre game's full playtime towards each genre exposure."
@@ -886,15 +889,13 @@ p_spacer + p_bars + p_genre + p_matrix +
     widths  = c(1, 4)
   )
 ```
-
 :::
 
 **Composition weights and display conventions.** Two further quantities derive from the same attribution scheme. The first is the composition weight used by the multi-membership model: each wave's weights are the shares of its attributed playtime that fall in each genre, normalised to sum to one, and the model distributes the wave's true total playtime across genres according to these weights. Because games with more labels contribute to more shares, such games receive slightly more weight than an equal division of each session's time would give them, which is consistent with the exposure construct. The second is a display convention: figures that present genres one at a time report full-attribution exposures, matching the model inputs, whereas the one display that stacks genres into a daily total (@fig-descriptives, panel D) divides each session's time equally across its labels, so that the stacked bars represent clock time.
 
 **Genre co-occurrence.** Because full attribution makes genre exposures non-exclusive, the structure of genre co-occurrence matters for interpreting every genre-level estimate: each genre coefficient describes exposure to a label in the company that label keeps. Multi-label games dominate the present data: `r round(pct_multigenre_games)`% of genre-matched titles and `r round(pct_multigenre_hours)`% of genre-matched playtime involve games carrying more than one label, across `r n_combinations` distinct observed combinations. @fig-genre-upset shows the playtime-weighted co-occurrence structure across these combinations, and @tbl-genre-cooccurrence lists the fifteen most-played combinations with their top titles, making concrete which games drive each pairing.
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: tbl-genre-cooccurrence
 #| tbl-cap: "Top 15 genre combinations by total playtime. Multi-genre rows join labels with ' + '. Total hours = playtime for games with that combination; % of playtime = share of all genre-matched playtime; n games = unique game-platform pairs. Xbox titles anonymised."
@@ -951,15 +952,13 @@ combo_stats |>
   style_tt(fontsize = 0.8) |>
   style_tt(i = 0, bold = TRUE)
 ```
-
 :::
 
 **Demographics.** Age, gender, ethnicity, country, and employment were collected at baseline via self-report. Full demographic characteristics are reported in @tbl-demographics.
 
 @fig-descriptives introduces the measures the models work with: the outcome's distribution at each biweekly wave (A), the distribution of the daily-playtime dose (B), the platform composition of the recorded play (C), and the day-to-day course of playtime, genre composition, and wellbeing for one participant with above-average playtime (D). Panel D makes the modelling problem concrete: within an individual, playtime, genre mix, and wellbeing all fluctuate from wave to wave, and their relationship is not discernible by eye. This is the situation that the within-between decomposition and the multi-membership specification below are designed to handle.
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: fig-descriptives
 #| fig-cap: !expr 'paste0("*Distributions, Composition, and Raw Structure of the Study Measures.* (A) SWEMWBS by wave: density, raw person-wave observations, and median box, fill lightening from wave 1 to 6. (B) Average daily playtime across person-waves with recorded play (15-minute bins; dashed line: median; x-axis truncated at the 99th percentile); ", round(pct_zero_pw), "% of person-waves have no recorded play. (C) Platform share of recorded playtime across study days 1\u201384. (D) Raw measures for one participant at the 75th percentile of playtime (ID ", p75_pid, "): daily playtime coloured by genre, with multi-genre time split equally across labels so bar heights are clock time (analysis exposures use full attribution; Appendix B, Deviation D1). Biweekly SWEMWBS is the purple line, read against the right axis.")'
@@ -1134,7 +1133,6 @@ p_descriptives <- ((panel_a | panel_b | panel_c) / panel_d) +
 
 p_descriptives
 ```
-
 :::
 
 ## Analytic Approach
@@ -1149,29 +1147,25 @@ We fit four Bayesian multilevel models. M0 includes total playtime only and addr
 
 M0 addresses H1: is total playtime across Nintendo, Xbox, and Steam associated with wellbeing? The model is a random-effects within-between (REWB) regression and returns the two coefficients defined above, $\beta_W$ for within-person fluctuations and $\beta_B$ for habitual between-person differences. Each participant receives a random intercept, because people differ in baseline wellbeing, and a random slope for within-person playtime, because the association need not be identical for everyone; the spread of these person-specific slopes is used later to bound individual susceptibility. Mobile platforms are excluded so that total playtime is defined identically in M0 and in the genre models, which cannot include them (Deviation D6; the pre-registered supplement retains the all-platform total). Priors are calibrated to the 1–5 outcome scale: the intercept prior is centred on the scale midpoint, and the coefficient priors are weakly informative, leaving effects up to roughly 1 point per hour/day plausible while regularising implausibly large values.
 
-$$
-\begin{aligned}
+$$\begin{aligned}
 \text{SWEMWBS}_{ij} &\sim \text{Normal}(\mu_{ij}, \sigma) \\
 \mu_{ij} &= \alpha + \beta_W \text{Time}_{\text{within},ij} + \beta_B \text{Time}_{\text{between},j} + u_{0j} + u_{1j} \text{Time}_{\text{within},ij} \\
 \begin{pmatrix} u_{0j} \\ u_{1j} \end{pmatrix} &\sim \text{Normal}\left(\mathbf{0}, \boldsymbol{\Sigma}\right) \\
 \alpha &\sim \text{Student-}t(3, 3, 2) \\
 \beta_W, \beta_B &\sim \text{Student-}t(3, 0, 0.5)
-\end{aligned}
-$$
+\end{aligned}$$
 
 ### M1: Pre-Registered Fixed-Effects
 
 M1 is the pre-registered specification for H2. Each of the 14 genres receives its own within-person and between-person coefficient, estimated independently, with a random intercept per participant. Independent estimation has a benefit and a cost. The benefit is that the model imposes no assumptions about how similar genres are to one another. The cost is that rarely played genres are estimated from little data and therefore receive wide credible intervals; this is the problem that M2 and M3 address. Because genre exposures are non-exclusive, they cannot be summed to recover total playtime, and M1 therefore contains no separate total-playtime term. Two departures from the registered specification should be noted: exposures use full attribution rather than primary-genre labels (Deviation D1), and the registered random slopes for all genre terms (28 additional parameters) proved near-singular, so we followed the pre-registered contingency plan and retained the random intercept only.
 
-$$
-\begin{aligned}
+$$\begin{aligned}
 \text{SWEMWBS}_{ij} &\sim \text{Normal}(\mu_{ij}, \sigma) \\
 \mu_{ij} &= \alpha + \sum_{g=1}^{G}\bigl(\beta_{W,g}\, \text{Time}_{\text{within},g,ij} + \beta_{B,g}\, \text{Time}_{\text{between},g,j}\bigr) + u_{0j} \\
 u_{0j} &\sim \text{Normal}(0, \tau_{\text{pid}}) \\
 \alpha &\sim \text{Student-}t(3, 3, 2) \\
 \beta_{W,g}, \beta_{B,g} &\sim \text{Student-}t(3, 0, 0.5)
-\end{aligned}
-$$
+\end{aligned}$$
 
 ### M2: Hierarchical Prior
 
@@ -1179,8 +1173,7 @@ M2 keeps M1's structure but changes how the genre coefficients are estimated, an
 
 The Half-Normal(0, 0.1) hyperprior on τ is matched to the outcome scale. Genre coefficients are expressed in SWEMWBS points per hour/day, and the smallest effect size of interest is 0.06 on that scale, so a much wider hyperprior would place substantial prior mass on heterogeneity far larger than any effect considered plausible. The sensitivity of the results to halving and doubling this scale is examined in Appendix D. Sampling near τ = 0 is numerically difficult, so we use conservative sampler settings and report divergence counts and R-hat diagnostics for every model alongside the results.
 
-$$
-\begin{aligned}
+$$\begin{aligned}
 \text{SWEMWBS}_{ij} &\sim \text{Normal}(\mu_{ij}, \sigma) \\
 \mu_{ij} &= \alpha + \sum_{g=1}^{G}\bigl(\beta_{W,g}\, \text{Time}_{\text{within},g,ij} + \beta_{B,g}\, \text{Time}_{\text{between},g,j}\bigr) + u_{0j} \\
 u_{0j} &\sim \text{Normal}(0, \tau_{\text{pid}}) \\
@@ -1188,8 +1181,7 @@ u_{0j} &\sim \text{Normal}(0, \tau_{\text{pid}}) \\
 \beta_{B,g} &\sim \text{Normal}(0, \tau_{\text{between}}) \\
 \tau_{\text{within}}, \tau_{\text{between}} &\sim \text{Half-Normal}(0, 0.1) \\
 \alpha &\sim \text{Student-}t(3, 3, 2)
-\end{aligned}
-$$
+\end{aligned}$$
 
 ### M3: Multi-Membership
 
@@ -1197,8 +1189,7 @@ M3 represents each wave the way panel D of @fig-descriptives displays it: as a t
 
 Each genre's slope adjustment is drawn from a common distribution, and the standard deviation of that distribution, σ~s~, is this model's answer to H2: it quantifies how much the playtime–wellbeing slope varies with the genres being played, after partial pooling. Three specification choices require comment. First, the model moderates only the playtime slope and includes no genre-specific intercepts; whether, for example, habitual RPG players report higher baseline wellbeing than habitual Shooter players is a question about self-selection, not about genre moderation. Second, the Half-Normal(0, 0.3) hyperprior on σ~s~ is wider than M2's, because the multi-membership posterior samples poorly under a tighter prior; this scale is likewise stress-tested in Appendix D. Third, waves with no recorded play receive uniform weights across genres, a technical requirement of the implementation with little consequence, because such waves carry almost no information about genre-specific effects.
 
-$$
-\begin{aligned}
+$$\begin{aligned}
 \text{SWEMWBS}_{ij} &\sim \text{Normal}(\mu_{ij}, \sigma) \\
 \mu_{ij} &= \alpha + \beta_W \text{Time}_{\text{within},ij} + \beta_B \text{Time}_{\text{between},j} + u_{0j} + u_{1j} \text{Time}_{\text{within},ij} \\
 &\quad + \sum_{g=1}^{G} w_{g,ij}(s_{W,g} \text{Time}_{\text{within},ij} + s_{B,g} \text{Time}_{\text{between},j}) \\
@@ -1208,10 +1199,9 @@ s_{B,g} &\sim \text{Normal}(0, \sigma_{s,\text{between}}) \\
 \alpha &\sim \text{Student-}t(3, 3, 2) \\
 \beta_W, \beta_B &\sim \text{Student-}t(3, 0, 0.5) \\
 \sigma_s, \sigma_{s,\text{between}} &\sim \text{Half-Normal}(0, 0.3)
-\end{aligned}
-$$
+\end{aligned}$$
 
-Because this use of multi-membership is unconventional (every wave carries all 14 genre labels and only the weights vary), we validated the specification by parameter recovery before fitting it to real data. Synthetic datasets with known genre-slope heterogeneity were fit with identical model code; every population-level parameter, including σ~s~, was recovered within its 95% credible interval, with no divergent transitions (simulation report in the supplementary materials). A simulation-based precision analysis for the pre-registered design is part of the Stage 1 protocol [@ballou2024psychological]. An exploratory daily-timescale analysis, specified after the registered analyses were complete, is reported at the end of the Results; its data, measures, and benchmarks are described there.
+Because this use of multi-membership is unconventional (every wave carries all 14 genre labels and only the weights vary), we validated the specification by parameter recovery before fitting it to real data. Synthetic datasets with known genre-slope heterogeneity were fit with identical model code; every population-level parameter, including σ~s~, was recovered within its 95% credible interval, with no divergent transitions (simulation report in the supplementary materials). A simulation-based precision analysis for the pre-registered design is part of the Stage 1 protocol [@ballou2024psychological]. An exploratory daily-timescale analysis, specified after the registered analyses were complete, is described in the Exploratory Daily-Timescale Analysis subsection below and reported at the end of the Results.
 
 ## Missing Data
 
@@ -1255,14 +1245,153 @@ stopifnot(wemwbs_within_sd > 0.28, wemwbs_within_sd < 0.45)
 
 Missingness in the outcome takes two forms, of markedly different sizes. Among submitted surveys, item-level missingness is rare and all-or-nothing: `r n_md_item_miss` submitted responses lack SWEMWBS, every one missing all seven items. The dominant form is wave nonresponse: survey completion declined from `r wave_response$pct[1]`% at wave 1 to `r wave_response$pct[6]`% at wave 6, leaving `r formatC(n_md_wave_miss, format = "d", big.mark = ",")` of the `r formatC(n_md_grid, format = "d", big.mark = ",")` analytic person-waves (`r pct_md_wave_miss`%) without an observed SWEMWBS. Telemetry-derived playtime is unaffected: tracking was continuous and automatic, so within linked platforms an absence of recorded play is a recorded absence rather than missing data, and exposures exist for every person-wave.
 
-The primary Bayesian models are fit to the observed outcomes; their mixed-effects likelihood is valid provided outcome missingness is at random given the modelled covariates and random effects. To test the burden that assumption carries, we multiply imputed SWEMWBS on the complete participant × wave grid, following the protocol of the programmatic registered report's other Stage 2 outputs: hierarchical two-level multiple imputation by chained equations [`mice` and `miceadds`; @vanbuuren2011mice; @robitzsch2024miceadds] with predictive mean matching (`2l.pmm`), participants as random-intercept clusters [@vanbuuren2018flexible], and m = 100 imputations set from the pilot fraction of missing information by von Hippel's [-@vonhippel2020] two-stage rule. Because predictive mean matching donates observed values, imputed scores respect the 1–5 scale. As can be seen in Appendix D (@tbl-sensitivity-imputation), the results from the multiple imputed analyses do not meaningfully differ from the complete-case analyses.
+The primary Bayesian models are fit to the observed outcomes; their mixed-effects likelihood is valid provided outcome missingness is at random given the modelled covariates and random effects. To test the burden that assumption carries, we multiply imputed SWEMWBS on the complete participant × wave grid, following the protocol of the programmatic registered report's other Stage 2 outputs: hierarchical two-level multiple imputation by chained equations \[`mice` and `miceadds`; @vanbuuren2011mice; @robitzsch2024miceadds\] with predictive mean matching (`2l.pmm`), participants as random-intercept clusters [@vanbuuren2018flexible], and m = 100 imputations set from the pilot fraction of missing information by von Hippel's [-@vonhippel2020] two-stage rule. Because predictive mean matching donates observed values, imputed scores respect the 1–5 scale. As can be seen in Appendix D (@tbl-sensitivity-imputation), the results from the multiple imputed analyses do not meaningfully differ from the complete-case analyses.
 
 ## Smallest Effect Size of Interest
 
 Establishing the absence of a practically significant effect requires committing in advance to a smallest effect size of interest (SESOI): the threshold below which an association is too small to matter. By practically significant, we mean the smallest change in wellbeing that a player would themselves notice, known as a minimally important difference. Following @ballouRegisteredReportEvidence2024, our SESOI of 0.06 SWEMWBS item-mean points per hour of daily play is built from two quantities. The first is how large a change in wellbeing must be before a person notices it: approximately 0.3 points on the 1–5 scale, a value @ballouRegisteredReportEvidence2024 anchored within the range implied by WEMWBS responsiveness studies (important change of 3 to 8 points on the 14–70 summed scale, i.e. roughly 0.2 to 0.6 points per item; @maheswaranEvaluatingResponsivenessWarwick2012) and that converges with anchor-based estimates for related depression and positive-affect measures [@anvari2021anchor]. The second is how large a change in playtime is realistically available: UK and US adults average approximately 5 hours of daily leisure time [@sturmFreeTimePhysical2019], an upper bound on how much daily play could plausibly rise or fall. The SESOI is the ratio of the two: 0.3 ÷ 5 = 0.06 points per hour. An association smaller than this means that even a person who shifted their entire daily leisure time into or out of gaming would not experience a noticeable change in wellbeing; there are not enough hours in the day for such an effect to matter.
 
-We evaluate all coefficients against the Region of Practical Equivalence [ROPE; @kruschke2018rejecting], defined as the interval [−0.06, +0.06]. Each coefficient receives one of four verdicts from where its 95% credible interval (CrI) falls: entirely inside the ROPE, practically null, meaning even the largest plausible effect is too small to matter; entirely above +0.06, practically positive, or entirely below −0.06, practically negative (meaningfully associated with higher and lower wellbeing, respectively). A CrI straddling either edge of the ROPE is inconclusive: the effect could be practically null or practically meaningful.
+We evaluate all coefficients against the Region of Practical Equivalence [ROPE; @kruschke2018rejecting], defined as the interval \[−0.06, +0.06\]. Each coefficient receives one of four verdicts from where its 95% credible interval (CrI) falls: entirely inside the ROPE, practically null, meaning even the largest plausible effect is too small to matter; entirely above +0.06, practically positive, or entirely below −0.06, practically negative (meaningfully associated with higher and lower wellbeing, respectively). A CrI straddling either edge of the ROPE is inconclusive: the effect could be practically null or practically meaningful.
 
+## Exploratory Daily-Timescale Analysis
+
+```{r}
+#| label: daily-setup
+#| include: false
+#| eval: true
+
+# Exploratory daily-timescale extension. Unregistered; the analysis plan
+# (notes/analysis_plan_daily.md, local working docs) fixed the equivalence
+# threshold transfer, exposure window, model set, priors, and the coverage
+# amendment BEFORE any exposure-outcome model was estimated. Fits are
+# produced by R/fit_daily_models.R and cached under models/daily/.
+
+daily_frame_raw <- read_csv(here("data/processed/daily/daily_model_frame.csv"),
+                            show_col_types = FALSE)
+d_gh_cols <- sort(grep("^gh_", names(daily_frame_raw), value = TRUE))
+stopifnot(length(d_gh_cols) == 14, "covered" %in% names(daily_frame_raw))
+
+d_decompose <- function(df) {
+  df |>
+    group_by(pid) |>
+    mutate(
+      total_within  = total_hours_today - mean(total_hours_today, na.rm = TRUE),
+      total_between = habitual_daily_hours
+    ) |>
+    ungroup()
+}
+# Analysed sample: telemetry-covered responses from participants with reliable
+# timezone inference, excluding degenerate same-day windows (< 1 h).
+daily_frame <- d_decompose(
+  daily_frame_raw |>
+    filter(covered, !tz_unreliable, window_hours >= 1,
+           !is.na(habitual_daily_hours))
+)
+
+# Sample and compliance quantities for the prose
+d_n_resp_all   <- nrow(daily_frame_raw)
+d_n_pid_all    <- n_distinct(daily_frame_raw$pid)
+d_n_resp       <- nrow(daily_frame)
+d_n_pid        <- n_distinct(daily_frame$pid)
+d_days_per_pid <- daily_frame |> count(pid) |> pull(n)
+d_median_days  <- median(d_days_per_pid)
+d_zero_share   <- mean(daily_frame$total_hours_today == 0)
+d_wh_med       <- median(daily_frame$window_hours)
+d_n_tz_unrel   <- daily_frame_raw |> filter(tz_unreliable) |> distinct(pid) |> nrow()
+d_day1_n       <- sum(daily_frame_raw$day == 1)
+d_day30_n      <- sum(daily_frame_raw$day == 30)
+d_n_no_tel_pid <- daily_frame_raw |> filter(!has_telemetry) |>
+  distinct(pid) |> nrow()
+d_n_uncov_resp <- sum(!daily_frame_raw$covered)
+
+# The daily outcome is a 0-100 slider; the biweekly life-satisfaction item
+# used by the bridge model is the 0-10 Cantril ladder. Each therefore gets
+# its own equivalence benchmark, both built like the registered SESOI: a
+# minimally important difference divided by the roughly five hours of daily
+# leisure realistically available.
+d_mid_daily  <- 5     # slider points (see text for the convergent anchors)
+d_primary    <- d_mid_daily / 5
+d_mid_bridge <- 0.5   # Cantril ladder rungs
+d_bridge_th  <- d_mid_bridge / 5
+
+# Guard the item descriptions the Measures text relies on: the daily slider
+# takes far more than 11 values, the biweekly ladder exactly 11.
+stopifnot(
+  n_distinct(daily_frame_raw$life_sat[!is.na(daily_frame_raw$life_sat)]) > 11,
+  max(daily_frame_raw$life_sat, na.rm = TRUE) > 10
+)
+
+# Within-person SDs (used descriptively for the cross-grain standardised
+# comparison in the reading paragraph, and the bridge's s_w).
+sesoi_d <- readRDS(here("models/daily/sesoi.rds"))
+d_within_sd <- function(x, id) {
+  d <- tibble(x = x, id = id) |> filter(!is.na(x)) |>
+    group_by(id) |> filter(n() >= 2) |> mutate(dev = x - mean(x)) |> ungroup()
+  sd(d$dev)
+}
+stopifnot(
+  abs(d_within_sd(daily_frame_raw$life_sat, daily_frame_raw$pid) -
+        sesoi_d$s_w_ls) < 1e-6
+)
+
+# Correlation between the daily outcome and the momentary valence slider
+# (both outcomes; no exposure involved). Quoted in the limitations.
+d_ls_av <- daily_frame_raw |> filter(!is.na(life_sat), !is.na(affective_valence))
+d_ls_av_r <- cor(d_ls_av$life_sat, d_ls_av$affective_valence)
+d_ls_av_rw <- d_ls_av |>
+  group_by(pid) |> filter(n() >= 2) |>
+  mutate(ls = life_sat - mean(life_sat),
+         av = affective_valence - mean(affective_valence)) |>
+  ungroup() |>
+  summarise(r = cor(ls, av)) |>
+  pull(r)
+
+# Positive control 1: self-reported play (past 24 h) vs telemetry in a
+# MATCHED 24-hour window; the control keeps the 24 h base precisely because
+# the analysis window does not match the self-report item's recall frame.
+d_ctrl <- daily_frame_raw |>
+  filter(covered24, played24hr %in% c("Yes", "No")) |>
+  mutate(self = played24hr == "Yes", tele = total_hours_24h > 0)
+d_ctrl_agree <- mean(d_ctrl$self == d_ctrl$tele)
+d_ctrl_phi   <- cor(d_ctrl$self, d_ctrl$tele)
+
+# Positive control 2: shooter-gender d in the diary subsample (biweekly
+# pipeline exposures; self-contained recode mirroring the Methods recode)
+d_intake_g <- read_csv(here("data/clean/survey_intake.csv.gz"),
+                       show_col_types = FALSE) |>
+  transmute(pid, gender = case_when(
+    gender %in% c("Man", "Male")     ~ "Man",
+    gender %in% c("Woman", "Female") ~ "Woman",
+    gender == "Prefer not to say"    ~ NA_character_,
+    is.na(gender)                    ~ NA_character_,
+    TRUE                             ~ "Non-binary/Other"
+  ))
+d_shooter <- read_csv(here("data/processed/genre_wave_long.csv"),
+                      show_col_types = FALSE) |>
+  filter(genre == "Shooter") |>
+  group_by(pid, wave) |>
+  summarise(sh = sum(hours_per_day), .groups = "drop")
+d_shooter_pid <- read_csv(here("data/processed/total_playtime.csv"),
+                          show_col_types = FALSE) |>
+  filter(pid %in% daily_frame_raw$pid) |>
+  distinct(pid) |>
+  left_join(d_shooter |> group_by(pid) |> summarise(sh = mean(sh), .groups = "drop"),
+            by = "pid") |>
+  mutate(sh = replace_na(sh, 0)) |>
+  inner_join(d_intake_g, by = "pid") |>
+  filter(gender %in% c("Man", "Woman"))
+d_sh_m <- d_shooter_pid |> filter(gender == "Man")   |> pull(sh)
+d_sh_w <- d_shooter_pid |> filter(gender == "Woman") |> pull(sh)
+d_pool_sd   <- sqrt(((length(d_sh_m) - 1) * var(d_sh_m) +
+                     (length(d_sh_w) - 1) * var(d_sh_w)) /
+                    (length(d_sh_m) + length(d_sh_w) - 2))
+d_shooter_d <- (mean(d_sh_m) - mean(d_sh_w)) / d_pool_sd
+
+```
+
+The daily extension is unregistered; an analysis plan fixed the exposure window, sample criteria, model set, priors, and equivalence benchmark before any exposure–outcome model was estimated. US participants were asked to complete daily surveys for the first 30 study days, including a life-satisfaction item ("I was satisfied with my life today") answered on a 0–100 slider [@ballou2025openplay], which serves as the outcome. Exposure is console and PC playtime from 4:00 a.m. local time of the response's waking day up to the survey completion timestamp, computed from the same session-level telemetry and full-attribution genre assignment as the main analysis, with local time taken from each participant's reported timezone; Xbox sessions recorded with date-only timestamps (8% of sessions) have their minutes spread uniformly over the recorded day (Appendix D). A response is analysed when its same-day window overlaps the participant's telemetry coverage, the participant's local time can be reliably established, the window is at least one hour long, and the participant's telemetry span supports a habitual full-day playtime estimate. Of `r print_num(d_n_resp_all)` diary responses from `r print_num(d_n_pid_all)` participants, `r print_num(d_n_resp)` responses (`r round(100 * d_n_resp / d_n_resp_all, 1)`%) from `r print_num(d_n_pid)` participants meet these criteria; exclusions are dominated by windows without telemetry coverage (`r print_num(d_n_uncov_resp)` responses, among them all responses from the `r print_num(d_n_no_tel_pid)` participants with no linked console or PC telemetry). Excluded responses enter an all-responses sensitivity refit that retains every response and scores unobserved play as zero (Appendix D).
+
+The within-between decomposition is hybrid: within-person terms are deviations from a person's own same-day average, and between-person terms are habitual full-day hours (a participant's total telemetry over their observed diary period divided by days, with genre analogues), which keeps habitual contrasts in daily-hour units directly comparable with the registered analysis. Because the pre-registered SESOI is defined on the SWEMWBS item-mean scale, an equivalence benchmark for the slider is constructed the same way, dividing a minimally important difference by the roughly five hours of daily leisure realistically available [@sturmFreeTimePhysical2019]. We adopt a minimally important difference of 5 slider points, below both a distribution-based half within-person standard deviation (`r round(0.5 * sesoi_d$s_w_ls, 1)` points) and the registered minimally important difference expressed as a share of its scale range (7.5%, or 7.5 slider points); the benchmark is therefore 1 slider point per hour of daily play, a deliberately conservative choice, since a smaller minimally important difference makes practical equivalence harder to claim rather than easier. The registered model specifications (M0–M3) are refit at the daily grain; because the analysis is unregistered, each parameter's posterior share inside the benchmark region is reported descriptively (@tbl-daily-summary) and no formal equivalence conclusions are drawn. Robustness refits (autocorrelated residuals with a day trend, adjustment for window length, exclusion of the date-only Xbox sessions, and the all-responses sample) and a same-instrument comparison model on the biweekly life-satisfaction ladder are reported in Appendix D.
 
 # Results
 
@@ -1383,7 +1512,7 @@ pooled_sd <- sqrt(
 dqc3_d <- (men_mean - women_mean) / pooled_sd
 ```
 
-Prior to hypothesis testing, we conducted the three pre-registered positive data quality controls (DQCs) to validate expected patterns in the data. First, self-reported biweekly playtime correlated positively with digital trace playtime (*r* = `r round(dqc1_result$estimate, 3)`, one-sided 95% lower bound = `r round(dqc1_result$conf.int[1], 3)`, *p* < .001). Second, session integrity largely held: Xbox contained `r n_xbox_overlaps` overlapping sessions and no Steam session's recorded playtime exceeded its elapsed wall-clock duration (`r n_steam_rate_violations` violations. Nintendo retained a small number of overlapping session pairs: `r formatC(n_nintendo_overlaps, format="d", big.mark=",")` of `r formatC(n_nintendo_sessions, format="d", big.mark=",")` sessions (`r round(pct_nintendo_overlaps, 2)`%), spread across `r n_nintendo_overlap_pids` of `r formatC(n_nintendo_pids, format="d", big.mark=",")` participants, with a median overlap of `r round(median_nintendo_overlap_min, 1)` minutes and accounting for `r round(pct_nintendo_overlap_min, 2)`% of total Nintendo playtime. These pairs reflect concurrent use of multiple consoles linked to one account: `r n_nintendo_overlaps_diff_title` of the `r n_nintendo_overlaps` pairs involved two different games recorded as running at once, and `r n_nintendo_overlaps_diff_device` involved two distinct console models (e.g., a Switch Lite overlapping an OLED model), which requires two physical devices; because the device identifier records the model rather than the individual console, some same-model pairs likely also reflect two consoles. The overlaps were also concentrated in a few accounts, with two participants alone contributing `r n_nintendo_overlaps_top2` pairs. Given their rarity and their small share of playtime, we judged these overlaps too small to materially influence the wave-level aggregates. Third, men played more shooter games than women (M = `r round(men_mean, 3)` vs. `r round(women_mean, 3)` hrs/day, *t*(`r round(dqc3_test$parameter, 1)`) = `r round(dqc3_test$statistic, 2)`, *p* < .001, Cohen's *d* = `r round(dqc3_d, 2)`), meeting the pre-registered criterion of a significant difference in the expected direction and consistent with population studies of gendered genre preferences [@rehbeinVideoGamePlaying2016], although the effect was somewhat smaller than the *d* = .3 assumed in the Stage 1 power analysis. We therefore proceeded with the confirmatory analyses.
+Prior to hypothesis testing, we conducted the three pre-registered positive data quality controls (DQCs) to validate expected patterns in the data. First, self-reported biweekly playtime correlated positively with digital trace playtime (*r* = `r round(dqc1_result$estimate, 3)`, one-sided 95% lower bound = `r round(dqc1_result$conf.int[1], 3)`, *p* \< .001). Second, session integrity largely held: Xbox contained `r n_xbox_overlaps` overlapping sessions and no Steam session's recorded playtime exceeded its elapsed wall-clock duration (`r n_steam_rate_violations` violations. Nintendo retained a small number of overlapping session pairs: `r formatC(n_nintendo_overlaps, format="d", big.mark=",")` of `r formatC(n_nintendo_sessions, format="d", big.mark=",")` sessions (`r round(pct_nintendo_overlaps, 2)`%), spread across `r n_nintendo_overlap_pids` of `r formatC(n_nintendo_pids, format="d", big.mark=",")` participants, with a median overlap of `r round(median_nintendo_overlap_min, 1)` minutes and accounting for `r round(pct_nintendo_overlap_min, 2)`% of total Nintendo playtime. These pairs reflect concurrent use of multiple consoles linked to one account: `r n_nintendo_overlaps_diff_title` of the `r n_nintendo_overlaps` pairs involved two different games recorded as running at once, and `r n_nintendo_overlaps_diff_device` involved two distinct console models (e.g., a Switch Lite overlapping an OLED model), which requires two physical devices; because the device identifier records the model rather than the individual console, some same-model pairs likely also reflect two consoles. The overlaps were also concentrated in a few accounts, with two participants alone contributing `r n_nintendo_overlaps_top2` pairs. Given their rarity and their small share of playtime, we judged these overlaps too small to materially influence the wave-level aggregates. Third, men played more shooter games than women (M = `r round(men_mean, 3)` vs. `r round(women_mean, 3)` hrs/day, *t*(`r round(dqc3_test$parameter, 1)`) = `r round(dqc3_test$statistic, 2)`, *p* \< .001, Cohen's *d* = `r round(dqc3_d, 2)`), meeting the pre-registered criterion of a significant difference in the expected direction and consistent with population studies of gendered genre preferences [@rehbeinVideoGamePlaying2016], although the effect was somewhat smaller than the *d* = .3 assumed in the Stage 1 power analysis. We therefore proceeded with the confirmatory analyses.
 
 ```{r}
 #| label: model-data
@@ -1577,7 +1706,6 @@ prettify_genre <- function(slug) {
 ```
 
 The analysis data comprise `r formatC(n_analysis_obs, format = "d", big.mark = ",")` observations from `r formatC(n_analysis_pids, format = "d", big.mark = ",")` participants, with playtime distributed across `r n_genres` genres.
-
 
 ```{r}
 #| label: h1-fit
@@ -1778,7 +1906,6 @@ stopifnot(h2_mm_divs == 0)
 stopifnot(h2_mm_rhat < 1.05)
 ```
 
-
 ## H1: Total Playtime and Wellbeing
 
 ```{r}
@@ -1882,10 +2009,9 @@ h1_comparison_draws <- bind_rows(
   )
 ```
 
-@fig-h1-all-models summarises the H1 results; the underlying posterior summaries for all hypothesis tests are tabulated in Appendix E (@tbl-hypothesis-summary). For the within-person effect (H1a), the posterior mean was `r round(beta1_mean, 3)` SWEMWBS item-mean points per hour/day (95% CrI: [`r round(beta1_ci[1], 3)`, `r round(beta1_ci[2], 3)`]), with `r round(beta1_in_rope * 100, 1)`% of the posterior inside the ROPE, above the 95% posterior-mass criterion adopted in Deviation D4 (the pre-registered decision rule, based on 90% CI bounds, is applied in the supplement and in the multiple-imputation analysis (Appendix D), and agrees). H1a is therefore supported: when a participant plays more than their own average in a given wave, their wellbeing does not change to any practically meaningful degree. For the between-person effect (H1b), the posterior mean was `r round(beta2_mean, 3)` (95% CrI: [`r round(beta2_ci[1], 3)`, `r round(beta2_ci[2], 3)`]), with `r round(beta2_in_rope * 100, 1)`% of the posterior inside the ROPE, likewise establishing practical equivalence. The between-person estimate leans negative (its credible interval extends just to zero), but its magnitude is far below the SESOI: even a 2 hour/day difference in habitual playtime would correspond to only `r round(beta2_mean * 2, 3)` points on the 1–5 scale (about `r abs(round(beta2_mean * 2 / 4 * 100, 1))`% of the 4-point range).
+@fig-h1-all-models summarises the H1 results; the underlying posterior summaries for all hypothesis tests are tabulated in Appendix E (@tbl-hypothesis-summary). For the within-person effect (H1a), the posterior mean was `r round(beta1_mean, 3)` SWEMWBS item-mean points per hour/day (95% CrI: \[`r round(beta1_ci[1], 3)`, `r round(beta1_ci[2], 3)`\]), with `r round(beta1_in_rope * 100, 1)`% of the posterior inside the ROPE, above the 95% posterior-mass criterion adopted in Deviation D4 (the pre-registered decision rule, based on 90% CI bounds, is applied in the supplement and in the multiple-imputation analysis (Appendix D), and agrees). H1a is therefore supported: when a participant plays more than their own average in a given wave, their wellbeing does not change to any practically meaningful degree. For the between-person effect (H1b), the posterior mean was `r round(beta2_mean, 3)` (95% CrI: \[`r round(beta2_ci[1], 3)`, `r round(beta2_ci[2], 3)`\]), with `r round(beta2_in_rope * 100, 1)`% of the posterior inside the ROPE, likewise establishing practical equivalence. The between-person estimate leans negative (its credible interval extends just to zero), but its magnitude is far below the SESOI: even a 2 hour/day difference in habitual playtime would correspond to only `r round(beta2_mean * 2, 3)` points on the 1–5 scale (about `r abs(round(beta2_mean * 2 / 4 * 100, 1))`% of the 4-point range).
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: fig-h1-all-models
 #| fig-cap: "*Posterior Distributions for Total Playtime Effects (H1).* M0 is the standalone H1 model; M3 adds genre information through multi-membership weights while still estimating overall playtime effects. M1 and M2 have no separate total-playtime predictor and are excluded. Green band: pre-registered ROPE (±0.06); panels share an x-axis."
@@ -1912,10 +2038,9 @@ ggplot(h1_comparison_draws, aes(x = value, y = model)) +
     strip.text = element_text(face = "bold")
   )
 ```
-
 :::
 
-Both components of H1 are therefore supported. The model also bounds person-to-person variation in the within-person association: the random-slope SD was `r round(sd_slope_mean, 3)` (95% CrI: [`r round(sd_slope_ci[1], 3)`, `r round(sd_slope_ci[2], 3)`]), with `r round(sd_slope_p_above * 100, 1)`% of its posterior above the SESOI; we return to this bound, and to the practical magnitude of the estimates, in the Discussion.
+Both components of H1 are therefore supported. The model also bounds person-to-person variation in the within-person association: the random-slope SD was `r round(sd_slope_mean, 3)` (95% CrI: \[`r round(sd_slope_ci[1], 3)`, `r round(sd_slope_ci[2], 3)`\]), with `r round(sd_slope_p_above * 100, 1)`% of its posterior above the SESOI; we return to this bound, and to the practical magnitude of the estimates, in the Discussion.
 
 The multi-membership model also provides H1 estimates via its fixed effects. @fig-h1-all-models confirms that M0 and M3 yield consistent H1 estimates: the inclusion of genre-level terms in M3 does not alter the overall playtime–wellbeing association.
 
@@ -1964,7 +2089,7 @@ sigma_sb_ci          <- quantile(sigma_sb_draws, probs = c(0.025, 0.975))
 sigma_sb_above_sesoi <- mean(sigma_sb_draws > 0.06)
 ```
 
-The primary test of H2 comes from the multi-membership model's genre heterogeneity parameters. For the within-person dimension (H2a), the posterior mean of $\sigma_{s,\text{within}}$ was `r round(sigma_sw_mean, 3)` (95% CrI: [`r round(sigma_sw_ci[1], 3)`, `r round(sigma_sw_ci[2], 3)`]). Because a standard deviation cannot be negative, the informative benchmark is the SESOI rather than zero: `r round(sigma_sw_above_sesoi * 100, 1)`% of the posterior exceeds 0.06. The data are thus most consistent with genre-to-genre variation in within-person slopes that is smaller than the smallest effect of interest, though the wide interval means heterogeneity of up to roughly 0.1 points per hour/day cannot be ruled out. For the between-person dimension (H2b), $\sigma_{s,\text{between}}$ = `r round(sigma_sb_mean, 3)` (95% CrI: [`r round(sigma_sb_ci[1], 3)`, `r round(sigma_sb_ci[2], 3)`]), with only `r round(sigma_sb_above_sesoi * 100, 1)`% of the posterior above the SESOI: between-person genre heterogeneity is practically negligible.
+The primary test of H2 comes from the multi-membership model's genre heterogeneity parameters. For the within-person dimension (H2a), the posterior mean of $\sigma_{s,\text{within}}$ was `r round(sigma_sw_mean, 3)` (95% CrI: \[`r round(sigma_sw_ci[1], 3)`, `r round(sigma_sw_ci[2], 3)`\]). Because a standard deviation cannot be negative, the informative benchmark is the SESOI rather than zero: `r round(sigma_sw_above_sesoi * 100, 1)`% of the posterior exceeds 0.06. The data are thus most consistent with genre-to-genre variation in within-person slopes that is smaller than the smallest effect of interest, though the wide interval means heterogeneity of up to roughly 0.1 points per hour/day cannot be ruled out. For the between-person dimension (H2b), $\sigma_{s,\text{between}}$ = `r round(sigma_sb_mean, 3)` (95% CrI: \[`r round(sigma_sb_ci[1], 3)`, `r round(sigma_sb_ci[2], 3)`\]), with only `r round(sigma_sb_above_sesoi * 100, 1)`% of the posterior above the SESOI: between-person genre heterogeneity is practically negligible.
 
 The two corroborating specifications answer the same question through different machinery and reach the same verdict more decisively.
 
@@ -1988,7 +2113,7 @@ tau_between_ci    <- quantile(tau_between_draws, c(0.025, 0.975))
 tau_between_in_rope <- mean(tau_between_draws > -0.06 & tau_between_draws < 0.06)
 ```
 
-Under the hierarchical prior model, τ~within~ = `r round(tau_mean, 3)` (95% CrI: [`r round(tau_ci[1], 3)`, `r round(tau_ci[2], 3)`]), with `r round(tau_in_rope * 100, 1)`% of the posterior inside the pre-registered ROPE (±0.06): the between-genre variation in within-person slopes is practically negligible under this specification. For the between-person dimension (H2b), τ~between~ = `r round(tau_between_mean, 3)` (95% CrI: [`r round(tau_between_ci[1], 3)`, `r round(tau_between_ci[2], 3)`]), with `r round(tau_between_in_rope * 100, 1)`% of the posterior inside the ROPE. The between-person parameter describes whether individuals who habitually favour certain genres differ in average wellbeing from those who favour others.
+Under the hierarchical prior model, τ~within~ = `r round(tau_mean, 3)` (95% CrI: \[`r round(tau_ci[1], 3)`, `r round(tau_ci[2], 3)`\]), with `r round(tau_in_rope * 100, 1)`% of the posterior inside the pre-registered ROPE (±0.06): the between-genre variation in within-person slopes is practically negligible under this specification. For the between-person dimension (H2b), τ~between~ = `r round(tau_between_mean, 3)` (95% CrI: \[`r round(tau_between_ci[1], 3)`, `r round(tau_between_ci[2], 3)`\]), with `r round(tau_between_in_rope * 100, 1)`% of the posterior inside the ROPE. The between-person parameter describes whether individuals who habitually favour certain genres differ in average wellbeing from those who favour others.
 
 ```{r}
 #| label: h2-joint-test
@@ -2017,7 +2142,7 @@ genre_bsd_mean    <- mean(genre_between_sd)
 genre_bsd_ci      <- quantile(genre_between_sd, probs = c(0.025, 0.975))
 ```
 
-Finally, the pre-registered fixed-effects specification (M1) provides the simplest version of the test: the Bayesian analogue of the pre-registered joint Wald test. We computed the standard deviation of the 14 genre-specific within-person coefficients at each MCMC draw. The posterior mean of this heterogeneity SD was `r round(genre_sd_mean, 3)` (95% CrI: [`r round(genre_sd_ci[1], 3)`, `r round(genre_sd_ci[2], 3)`]), an interval that lies entirely below the SESOI of 0.06. For between-person effects the heterogeneity SD was `r round(genre_bsd_mean, 3)` (95% CrI: [`r round(genre_bsd_ci[1], 3)`, `r round(genre_bsd_ci[2], 3)`]), the only statistic among the three specifications to exceed the SESOI; as discussed below, this raw SD includes sampling error and should be read as an upper bound. The pre-registered primary-genre joint Wald tests in the supplement do not reject the hypothesis that all genre coefficients are equal, for either dimension; on the full-attribution exposures used here, the complete-case joint test detects a statistically significant but practically negligible departure from exact within-person equality, which the multiple-imputation analysis (Appendix D) reports and contextualises against the SESOI.
+Finally, the pre-registered fixed-effects specification (M1) provides the simplest version of the test: the Bayesian analogue of the pre-registered joint Wald test. We computed the standard deviation of the 14 genre-specific within-person coefficients at each MCMC draw. The posterior mean of this heterogeneity SD was `r round(genre_sd_mean, 3)` (95% CrI: \[`r round(genre_sd_ci[1], 3)`, `r round(genre_sd_ci[2], 3)`\]), an interval that lies entirely below the SESOI of 0.06. For between-person effects the heterogeneity SD was `r round(genre_bsd_mean, 3)` (95% CrI: \[`r round(genre_bsd_ci[1], 3)`, `r round(genre_bsd_ci[2], 3)`\]), the only statistic among the three specifications to exceed the SESOI; as discussed below, this raw SD includes sampling error and should be read as an upper bound. The pre-registered primary-genre joint Wald tests in the supplement do not reject the hypothesis that all genre coefficients are equal, for either dimension; on the full-attribution exposures used here, the complete-case joint test detects a statistically significant but practically negligible departure from exact within-person equality, which the multiple-imputation analysis (Appendix D) reports and contextualises against the SESOI.
 
 @fig-h2-heterogeneity shows the posterior distributions for the genre heterogeneity statistics from all three H2 models. M1's statistic is the standard deviation of the 14 independent within-person genre coefficients (computed per posterior draw); M2's is τ~genre~ from the learned hierarchical prior; M3's is σ~s~ from the multi-membership random effects. All three are in the same units (SWEMWBS item-mean per hour/day) and represent how much genre-specific playtime slopes vary across genres.
 
@@ -2058,8 +2183,7 @@ h2_het_draws <- bind_rows(
   )
 ```
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: fig-h2-heterogeneity
 #| fig-cap: "*Genre Heterogeneity Across H2 Model Specifications.* Left: within-person (H2a); right: between-person (H2b). Green band: SESOI region (0 to 0.06). A posterior falling entirely inside the band indicates practically negligible genre heterogeneity."
@@ -2087,7 +2211,6 @@ ggplot(h2_het_draws, aes(x = value, y = model)) +
     strip.text = element_text(face = "bold")
   )
 ```
-
 :::
 
 The H2 heterogeneity estimates converge on a consistent qualitative picture: genre-to-genre variation in per-hour wellbeing slopes is at most small. All three statistics are positive by construction, so their posteriors cannot include zero; the informative benchmark in @fig-h2-heterogeneity is the SESOI band. On the within-person dimension, M2's τ (`r round(tau_mean, 3)`) and M1's raw SD (`r round(mean(m1_sd_within_per_draw), 3)`) both fall entirely below 0.06, while M3's σ~s~ (`r round(sigma_sw_mean, 3)`) straddles the boundary with about a fifth of its posterior above it. On the between-person dimension, the two pooled estimates (M2, M3) fall below the SESOI while M1's raw SD exceeds it, the expected signature of sampling-noise inflation. M1's SD is the empirical standard deviation of 14 independently estimated coefficients and therefore includes estimation error, especially from rare genres with wide posteriors; M2's τ and M3's σ~s~ are model-estimated pooling parameters that separate signal from noise. The two pooled parameters operate on different quantities: τ is a hyperprior scale on genre *fixed effects* under Half-Normal(0, 0.1), while σ~s~ is the standard deviation of genre *random-slope deviations* under Half-Normal(0, 0.3), so their posterior medians need not coincide; σ~s~ can exceed τ because it absorbs genre-to-genre variation in the slope of total playtime, a quantity M2 does not directly parameterise. Overall, the pooled specifications place genre heterogeneity below the pre-registered equivalence threshold on both dimensions, and no specification provides positive evidence of practically meaningful genre differences.
@@ -2220,8 +2343,7 @@ all_coefs <- bind_rows(
   )))
 ```
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: fig-integrated-coefs
 #| fig-cap: "*Per-Genre Exposure Coefficients Across Three Model Specifications.* Left: within-person (H2a); right: between-person (H2b), on a common x-axis. Each genre row shows M1 (circle, no pooling), M2 (square, hierarchical prior), and M3 (diamond, multi-membership, with the overall fixed effect added back to place all three on an absolute scale). Genres ordered by the M2 within-person estimate. Green band: pre-registered ROPE (±0.06)."
@@ -2269,7 +2391,6 @@ ggplot(all_coefs |>
     strip.text = element_text(face = "bold")
   )
 ```
-
 :::
 
 The three model specifications converge on a consistent per-genre pattern for both within- and between-person effects. The primary visible difference is that M2 and M3 produce narrower credible intervals for rare genres (Visual Novel, Fighting, Point-and-Click) relative to M1's wider independent estimates, reflecting the partial pooling that each achieves through different mechanisms. For common genres, the three specifications produce near-identical point estimates and interval widths.
@@ -2336,139 +2457,12 @@ stopifnot(
 )
 ```
 
-## Exploratory Analysis: The Daily Timescale
+## Exploratory Results: The Daily Timescale
 
 ```{r}
-#| label: daily-setup
+#| label: daily-fits
 #| include: false
 #| eval: true
-
-# Exploratory daily-timescale extension. Unregistered; the analysis plan
-# (notes/analysis_plan_daily.md, released with the code) fixed the equivalence
-# threshold transfer, exposure window, model set, priors, and the coverage
-# amendment BEFORE any exposure-outcome model was estimated. Fits are
-# produced by R/fit_daily_models.R and cached under models/daily/.
-
-daily_frame_raw <- read_csv(here("data/processed/daily/daily_model_frame.csv"),
-                            show_col_types = FALSE)
-d_gh_cols <- sort(grep("^gh_", names(daily_frame_raw), value = TRUE))
-stopifnot(length(d_gh_cols) == 14, "covered" %in% names(daily_frame_raw))
-
-d_decompose <- function(df) {
-  df |>
-    group_by(pid) |>
-    mutate(
-      total_within  = total_hours_today - mean(total_hours_today, na.rm = TRUE),
-      total_between = habitual_daily_hours
-    ) |>
-    ungroup()
-}
-# Primary frame: telemetry-covered responses from participants with reliable
-# timezone inference, excluding degenerate same-day windows (< 1 h).
-daily_frame <- d_decompose(
-  daily_frame_raw |>
-    filter(covered, !tz_unreliable, window_hours >= 1,
-           !is.na(habitual_daily_hours))
-)
-
-# Sample and compliance quantities for the prose
-d_n_resp_all   <- nrow(daily_frame_raw)
-d_n_pid_all    <- n_distinct(daily_frame_raw$pid)
-d_n_resp       <- nrow(daily_frame)
-d_n_pid        <- n_distinct(daily_frame$pid)
-d_days_per_pid <- daily_frame |> count(pid) |> pull(n)
-d_median_days  <- median(d_days_per_pid)
-d_zero_share   <- mean(daily_frame$total_hours_today == 0)
-d_wh_med       <- median(daily_frame$window_hours)
-d_n_tz_unrel   <- daily_frame_raw |> filter(tz_unreliable) |> distinct(pid) |> nrow()
-d_day1_n       <- sum(daily_frame_raw$day == 1)
-d_day30_n      <- sum(daily_frame_raw$day == 30)
-d_n_no_tel_pid <- daily_frame_raw |> filter(!has_telemetry) |>
-  distinct(pid) |> nrow()
-d_n_uncov_resp <- sum(!daily_frame_raw$covered)
-
-# The daily outcome is a 0-100 slider; the biweekly life-satisfaction item
-# used by the bridge model is the 0-10 Cantril ladder. Each therefore gets
-# its own equivalence benchmark, both built like the registered SESOI: a
-# minimally important difference divided by the roughly five hours of daily
-# leisure realistically available.
-d_mid_daily  <- 5     # slider points (see text for the convergent anchors)
-d_primary    <- d_mid_daily / 5
-d_mid_bridge <- 0.5   # Cantril ladder rungs
-d_bridge_th  <- d_mid_bridge / 5
-
-# Guard the item descriptions the Measures text relies on: the daily slider
-# takes far more than 11 values, the biweekly ladder exactly 11.
-stopifnot(
-  n_distinct(daily_frame_raw$life_sat[!is.na(daily_frame_raw$life_sat)]) > 11,
-  max(daily_frame_raw$life_sat, na.rm = TRUE) > 10
-)
-
-# Within-person SDs (used descriptively for the cross-grain standardised
-# comparison in the reading paragraph, and the bridge's s_w).
-sesoi_d <- readRDS(here("models/daily/sesoi.rds"))
-d_within_sd <- function(x, id) {
-  d <- tibble(x = x, id = id) |> filter(!is.na(x)) |>
-    group_by(id) |> filter(n() >= 2) |> mutate(dev = x - mean(x)) |> ungroup()
-  sd(d$dev)
-}
-stopifnot(
-  abs(d_within_sd(daily_frame_raw$life_sat, daily_frame_raw$pid) -
-        sesoi_d$s_w_ls) < 1e-6
-)
-
-# Correlation between the daily outcome and the momentary valence slider
-# (both outcomes; no exposure involved). Quoted in the limitations.
-d_ls_av <- daily_frame_raw |> filter(!is.na(life_sat), !is.na(affective_valence))
-d_ls_av_r <- cor(d_ls_av$life_sat, d_ls_av$affective_valence)
-d_ls_av_rw <- d_ls_av |>
-  group_by(pid) |> filter(n() >= 2) |>
-  mutate(ls = life_sat - mean(life_sat),
-         av = affective_valence - mean(affective_valence)) |>
-  ungroup() |>
-  summarise(r = cor(ls, av)) |>
-  pull(r)
-
-# Positive control 1: self-reported play (past 24 h) vs telemetry in a
-# MATCHED 24-hour window; the control keeps the 24 h base precisely because
-# the analysis window does not match the self-report item's recall frame.
-d_ctrl <- daily_frame_raw |>
-  filter(covered24, played24hr %in% c("Yes", "No")) |>
-  mutate(self = played24hr == "Yes", tele = total_hours_24h > 0)
-d_ctrl_agree <- mean(d_ctrl$self == d_ctrl$tele)
-d_ctrl_phi   <- cor(d_ctrl$self, d_ctrl$tele)
-
-# Positive control 2: shooter-gender d in the diary subsample (biweekly
-# pipeline exposures; self-contained recode mirroring the Methods recode)
-d_intake_g <- read_csv(here("data/clean/survey_intake.csv.gz"),
-                       show_col_types = FALSE) |>
-  transmute(pid, gender = case_when(
-    gender %in% c("Man", "Male")     ~ "Man",
-    gender %in% c("Woman", "Female") ~ "Woman",
-    gender == "Prefer not to say"    ~ NA_character_,
-    is.na(gender)                    ~ NA_character_,
-    TRUE                             ~ "Non-binary/Other"
-  ))
-d_shooter <- read_csv(here("data/processed/genre_wave_long.csv"),
-                      show_col_types = FALSE) |>
-  filter(genre == "Shooter") |>
-  group_by(pid, wave) |>
-  summarise(sh = sum(hours_per_day), .groups = "drop")
-d_shooter_pid <- read_csv(here("data/processed/total_playtime.csv"),
-                          show_col_types = FALSE) |>
-  filter(pid %in% daily_frame_raw$pid) |>
-  distinct(pid) |>
-  left_join(d_shooter |> group_by(pid) |> summarise(sh = mean(sh), .groups = "drop"),
-            by = "pid") |>
-  mutate(sh = replace_na(sh, 0)) |>
-  inner_join(d_intake_g, by = "pid") |>
-  filter(gender %in% c("Man", "Woman"))
-d_sh_m <- d_shooter_pid |> filter(gender == "Man")   |> pull(sh)
-d_sh_w <- d_shooter_pid |> filter(gender == "Woman") |> pull(sh)
-d_pool_sd   <- sqrt(((length(d_sh_m) - 1) * var(d_sh_m) +
-                     (length(d_sh_w) - 1) * var(d_sh_w)) /
-                    (length(d_sh_m) + length(d_sh_w) - 2))
-d_shooter_d <- (mean(d_sh_m) - mean(d_sh_w)) / d_pool_sd
 
 # ---- Fits ------------------------------------------------------------------
 d_m0_ls   <- readRDS(here("models/daily/m0_daily_ls.rds"))
@@ -2582,20 +2576,13 @@ d_bridge_n    <- nobs(d_bridge_fit)
 d_bridge_sw   <- sesoi_d$s_w_bls
 ```
 
-The biweekly design answers its questions at a two-week grain, and the Discussion's measurement-resolution reading makes a testable claim one level further down: if aggregation over the biweekly window is what hides genre effects, they should begin to surface at the daily grain. The Open Play dataset contains the material for a first, exploratory test. US participants were additionally invited to complete daily surveys for the first 30 study days, including a daily life-satisfaction item ("I was satisfied with my life today") answered on a 0–100 slider [@ballou2025openplay]. We therefore re-ran the structure of both hypotheses at the daily timescale. This analysis is exploratory and was not pre-registered; all analysis decisions, including the equivalence threshold transfer and a telemetry-coverage restriction, were fixed in code before any exposure–outcome model was estimated, and the analysis plan is released alongside the code.
+Participants in the analysed daily sample contribute a median of `r d_median_days` diary days, and participation declines from `r print_num(d_day1_n)` responses on day 1 to `r print_num(d_day30_n)` on day 30. Windows have a median length of `r round(d_wh_med, 1)` hours and close at the survey completion timestamp, so `r round(100 * d_zero_share, 1)`% of person-days record zero console/PC play in the window. Both positive controls pass in this subsample: self-reported past-24-hour play agrees with telemetry in a matched 24-hour window on `r round(100 * d_ctrl_agree, 1)`% of responses (φ = `r round(d_ctrl_phi, 2)`), and men play more Shooter than women (d = `r round(d_shooter_d, 2)`).
 
-Daily life satisfaction served as the outcome. (The released codebook describes this item as a Cantril ladder scored 0–10; the administered item is the daily statement quoted above, as the 101 distinct response values in the released data show and as the dataset authors confirm.) The diary also carried a momentary affective-valence slider, which we do not analyse: a state assessed at a single moment belongs to session-level designs rather than to a question about a day's play. Because the item asks about *today*, exposure was defined per response as console and PC playtime from 4:00 a.m. local time of the response's waking day up to the survey completion timestamp, computed from the same session-level telemetry and full-attribution genre assignment as the main analysis (mobile platforms provide no sub-day resolution and are excluded). The 4 a.m. day boundary is the dataset's own time-use convention and assigns the after-midnight responses the survey permits (links were live from 2 p.m. to 3 a.m. local) to the waking day they describe. Telemetry timestamps are UTC; local time comes from each participant's reported timezone (a standard offset recorded at intake, adjusted for daylight saving by date, following the dataset's own conversion). Participants without a reported timezone are excluded, and the survey's 2 p.m.–3 a.m. local availability window serves as a quality check: participants whose completion times violate it in more than a fifth of their responses under their reported offset (`r d_n_tz_unrel`) have unreliable local clocks and are likewise excluded from the primary frame. Window length consequently varies with response time (median `r round(d_wh_med, 1)` hours). The decomposition is hybrid: within-person terms are deviations from a person's own same-day average, while between-person terms are habitual full-day hours (a participant's total telemetry over their observed diary period divided by days, and the genre analogues), which keeps habitual contrasts in daily-hour units directly comparable with the benchmark, the registered analysis, and the biweekly comparison model. One further recording artefact is handled explicitly: 8% of Xbox sessions carry only a date, with start times floored to midnight, and their minutes are spread uniformly over the recorded day; a sensitivity excluding them is reported alongside. Because the pre-registered SESOI is defined on the SWEMWBS item-mean scale, an equivalence benchmark for the daily slider has to be constructed. We build it exactly as the registered threshold is built, dividing a minimally important difference by the roughly five hours of daily leisure realistically available [@sturmFreeTimePhysical2019], and we take the minimally important difference from the lower edge of what two independent conventions imply. A distribution-based rule of half a within-person standard deviation gives `r round(0.5 * sesoi_d$s_w_ls, 1)` slider points (s~w~ = `r round(sesoi_d$s_w_ls, 1)`). Expressing the registered minimally important difference as a share of its scale range (0.3 of the 4 available SWEMWBS points, 7.5%) gives 7.5 points on a 0–100 slider. We adopt 5 points, below both: 5% of the scale range, `r round(5 / sesoi_d$s_w_ls, 2)` within-person standard deviations, and deliberately conservative, since a smaller minimally important difference makes practical equivalence harder to claim rather than easier. The equivalence benchmark is therefore 1 slider point per hour of daily play, and each parameter's posterior share inside that region is tabulated in Appendix E (@tbl-daily-summary). As this analysis is unregistered, posterior shares are reported descriptively throughout and no formal equivalence conclusions are drawn; the reasoning is documented in the released analysis plan.
+At the daily grain, the within-person association between same-day playtime and life satisfaction was positive: β = `r round(d_r0$b1, 2)` points per additional hour (95% CrI \[`r round(d_r0$b1_ci[1], 2)`, `r round(d_r0$b1_ci[2], 2)`\]), with the lower credible bound at zero and the entire posterior inside the equivalence region (`r round(100 * d_r0$b1_rope, 1)`%); the interval widens past zero under two of the three robustness refits (Appendix D). Person-to-person variation in this slope was bounded: random-slope SD = `r round(d_r0$sd_slope, 2)` (95% CrI \[`r round(d_r0$sd_slope_ci[1], 2)`, `r round(d_r0$sd_slope_ci[2], 2)`\]), with `r round(100 * (1 - d_r0$sd_slope_above), 1)`% of the posterior below the benchmark. Between persons, with habitual play measured in full-day hours, participants who play more than others reported slightly lower daily life satisfaction: β = `r round(d_r0$b2, 2)` points per habitual daily hour (95% CrI \[`r round(d_r0$b2_ci[1], 2)`, `r round(d_r0$b2_ci[2], 2)`\]), a negative lean whose posterior sits `r round(100 * d_r0$b2_rope, 1)`% inside the equivalence region; the all-responses refit and the multi-membership model's total-playtime fixed effects give materially the same estimates on both dimensions (Appendix D; @tbl-daily-summary).
 
-Of `r print_num(d_n_resp_all)` diary responses from `r print_num(d_n_pid_all)` participants, the primary frame retains the `r print_num(d_n_resp)` responses (`r round(100 * d_n_resp / d_n_resp_all, 1)`%) from `r print_num(d_n_pid)` participants whose same-day window overlaps their own telemetry coverage and whose local time could be established. Responses from participants with no linked console or PC telemetry, windows falling outside a participant's telemetry span, the participants excluded on timezone grounds above, degenerate windows shorter than one hour, and participants whose telemetry span cannot support a habitual full-day estimate cannot distinguish non-play from unobserved play and enter only the full-frame sensitivity refit. Within the primary frame, `r round(100 * d_zero_share, 1)`% of person-days have zero recorded console/PC play in the window, an expected feature of this design: the survey arrives at 2 p.m., so for early responders the window covers only the pre-afternoon part of the day, and associations read as play-so-far against satisfaction-so-far. Participants contribute a median of `r d_median_days` diary days, and diary participation declines from `r print_num(d_day1_n)` responses on day 1 to `r print_num(d_day30_n)` on day 30. Both positive controls pass in this subsample: self-reported past-24-hour play agrees with telemetry in a matched 24-hour window on `r round(100 * d_ctrl_agree, 1)`% of responses (φ = `r round(d_ctrl_phi, 2)`; disagreement is dominated by self-reported play with zero console/PC telemetry, as expected when mobile play is unmeasured), and men play more Shooter than women (d = `r round(d_shooter_d, 2)`).
+Genre heterogeneity at the daily grain, with between-person genre exposures likewise in habitual daily hours, stayed within the registered pattern. Within persons all three specifications sit inside the benchmark: the unpooled M1 gives a per-draw SD across the 14 genre coefficients of `r round(d_m1_sdw, 2)` (95% CrI \[`r round(d_m1_sdw_ci[1], 2)`, `r round(d_m1_sdw_ci[2], 2)`\]; noise-inflated, as at the biweekly grain), the hierarchical prior gives τ~within~ = `r round(d_r2$tau_w, 2)` (95% CrI \[`r round(d_r2$tau_w_ci[1], 2)`, `r round(d_r2$tau_w_ci[2], 2)`\]; `r round(100 * d_r2$tau_w_rope, 1)`% below the benchmark), and the multi-membership model gives σ~s,within~ = `r round(d_sigma_sw, 2)` (95% CrI \[`r round(d_sigma_sw_ci[1], 2)`, `r round(d_sigma_sw_ci[2], 2)`\]; `r round(100 * d_sigma_sw_below, 1)`% below). Between persons the pooled evidence is inconclusive rather than bounded: τ~between~ = `r round(d_r2$tau_b, 2)` (95% CrI \[`r round(d_r2$tau_b_ci[1], 2)`, `r round(d_r2$tau_b_ci[2], 2)`\]) straddles the benchmark with `r round(100 * d_r2$tau_b_rope, 1)`% of its posterior below it, σ~s,between~ = `r round(d_sigma_sb, 2)` (95% CrI \[`r round(d_sigma_sb_ci[1], 2)`, `r round(d_sigma_sb_ci[2], 2)`\]) keeps `r round(100 * d_sigma_sb_below, 1)`% below, and M1's between-person raw SD (`r round(d_m1_sdb, 2)`, 95% CrI \[`r round(d_m1_sdb_ci[1], 2)`, `r round(d_m1_sdb_ci[2], 2)`\]) sits far above with the usual estimation-error inflation. Sampling diagnostics were healthy (all R-hat ≤ `r round(max(d_r0$rhat, d_r0f$rhat, d_r0a$rhat, d_r0w$rhat, d_m1_rhat, d_r2$rhat, d_m3_rhat), 3)`); the hierarchical-prior model retained `r d_r2$divs` divergent transitions of 16,000 post-warmup draws (0.1%), no other fit had any, and two further qualifications are noted in Appendix D. Individual genre estimates carry credible intervals many times wider than their point estimates and are not interpreted. @fig-daily-posteriors displays the posteriors against the benchmark.
 
-At the daily grain, the within-person association between same-day playtime and life satisfaction was positive: β = `r round(d_r0$b1, 2)` points per additional hour (95% CrI [`r round(d_r0$b1_ci[1], 2)`, `r round(d_r0$b1_ci[2], 2)`]), an interval whose lower bound sits at zero. Its magnitude is roughly a fifth of the equivalence benchmark of 1 point, and the entire posterior lies inside the equivalence region (`r round(100 * d_r0$b1_rope, 1)`%). Three robustness refits probe the specification against the standard concerns for daily data, and the direction does not survive them all: allowing first-order autocorrelated residuals (estimated AR(1) = `r round(d_ar1, 2)`) with a within-person day trend widens the interval past zero (β = `r round(d_r0a$b1, 2)`, 95% CrI [`r round(d_r0a$b1_ci[1], 2)`, `r round(d_r0a$b1_ci[2], 2)`]), as does adjusting for window length (β = `r round(d_r0w$b1, 2)`, 95% CrI [`r round(d_r0w$b1_ci[1], 2)`, `r round(d_r0w$b1_ci[2], 2)`]), while excluding the date-floored Xbox sessions does not (β = `r round(d_rx_b1, 2)`, 95% CrI [`r round(d_rx_b1_ci[1], 2)`, `r round(d_rx_b1_ci[2], 2)`]); the positive direction is suggestive rather than resolved. In dose terms the association is small under every reading: shifting daily life satisfaction by one minimally important difference (`r d_mid_daily` points) would require `r round(d_mid_daily / d_r0$b1)` additional hours of same-day play at the point estimate, beyond the waking day, and `r round(d_mid_daily / d_r0$b1_ci[2])` hours even at the credible bound most favourable to an effect, beyond the five hours of daily leisure the benchmark assumes. Person-to-person variation in this within-person slope remained bounded: random-slope SD = `r round(d_r0$sd_slope, 2)` (95% CrI [`r round(d_r0$sd_slope_ci[1], 2)`, `r round(d_r0$sd_slope_ci[2], 2)`]), with `r round(100 * (1 - d_r0$sd_slope_above), 1)`% of the posterior below the benchmark.
-
-Between persons, with habitual play measured in full-day hours, participants who play more than others reported slightly lower daily life satisfaction, without resolution: β = `r round(d_r0$b2, 2)` points per habitual daily hour (95% CrI [`r round(d_r0$b2_ci[1], 2)`, `r round(d_r0$b2_ci[2], 2)`]), a negative lean whose posterior sits `r round(100 * d_r0$b2_rope, 1)`% inside the equivalence region, echoing the registered biweekly between-person estimate at its own scale. The full-frame sensitivity, which scores unobserved play as zero, gives the same lean (β = `r round(d_r0f$b2, 2)`, 95% CrI [`r round(d_r0f$b2_ci[1], 2)`, `r round(d_r0f$b2_ci[2], 2)`]). Even so, the between-person dimension remains the least settled quantity here: at the credible bound most favourable to an effect the dose reaches one minimally important difference within `r round(d_mid_daily / abs(d_r0$b2_ci[1]))` habitual hours per day, inside the realistic leisure range, and a habitual-play contrast is where selection, that people play more during worse periods of life, is least separable from any effect of play. As at the biweekly grain, the multi-membership model's total-playtime fixed effects agree with M0 on both dimensions (within-person β = `r round(d_m3_b1, 2)`, 95% CrI [`r round(d_m3_b1_ci[1], 2)`, `r round(d_m3_b1_ci[2], 2)`]; between-person β = `r round(d_m3_b2, 2)`, 95% CrI [`r round(d_m3_b2_ci[1], 2)`, `r round(d_m3_b2_ci[2], 2)`]): adding genre-level terms does not alter the overall associations.
-
-Genre heterogeneity at the daily grain, with between-person genre exposures likewise in habitual daily hours, stayed within the registered pattern. Within persons all three specifications sit inside the benchmark: the unpooled M1 gives a per-draw SD across the 14 genre coefficients of `r round(d_m1_sdw, 2)` (95% CrI [`r round(d_m1_sdw_ci[1], 2)`, `r round(d_m1_sdw_ci[2], 2)`]; noise-inflated, as at the biweekly grain), the hierarchical prior gives τ~within~ = `r round(d_r2$tau_w, 2)` (95% CrI [`r round(d_r2$tau_w_ci[1], 2)`, `r round(d_r2$tau_w_ci[2], 2)`]; `r round(100 * d_r2$tau_w_rope, 1)`% below the benchmark), and the multi-membership model gives σ~s,within~ = `r round(d_sigma_sw, 2)` (95% CrI [`r round(d_sigma_sw_ci[1], 2)`, `r round(d_sigma_sw_ci[2], 2)`]; `r round(100 * d_sigma_sw_below, 1)`% below). Between persons the pooled evidence is inconclusive rather than bounded: τ~between~ = `r round(d_r2$tau_b, 2)` (95% CrI [`r round(d_r2$tau_b_ci[1], 2)`, `r round(d_r2$tau_b_ci[2], 2)`]) straddles the benchmark with `r round(100 * d_r2$tau_b_rope, 1)`% of its posterior below it, σ~s,between~ = `r round(d_sigma_sb, 2)` (95% CrI [`r round(d_sigma_sb_ci[1], 2)`, `r round(d_sigma_sb_ci[2], 2)`]) keeps `r round(100 * d_sigma_sb_below, 1)`% below, and M1's between-person raw SD (`r round(d_m1_sdb, 2)`, 95% CrI [`r round(d_m1_sdb_ci[1], 2)`, `r round(d_m1_sdb_ci[2], 2)`]) sits far above with the usual estimation-error inflation; the genre-level intervals also inherit the exchangeable-residual assumption that the autocorrelation refit relaxes for the total-playtime model only. Sampling diagnostics were healthy (all R-hat ≤ `r round(max(d_r0$rhat, d_r0f$rhat, d_r0a$rhat, d_r0w$rhat, d_m1_rhat, d_r2$rhat, d_m3_rhat), 3)`) with one disclosed exception: the hierarchical-prior model retained `r d_r2$divs` divergent transitions of 16,000 post-warmup draws (0.1%) after a documented step-size escalation, with estimates stable across both settings; no other fit had any. As at the biweekly grain, individual genre estimates carry credible intervals many times wider than their point estimates and are not interpreted. @fig-daily-posteriors displays the posteriors against the benchmark.
-
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: fig-daily-posteriors
 #| fig-cap: "*Exploratory Daily-Timescale Posteriors (Life Satisfaction).* Left: total-playtime effects from the standalone H1 model (M0) and the multi-membership model's fixed effects (M3), as in @fig-h1-all-models; within-person rows are per hour of same-day play, between-person rows per hour of habitual daily play (hybrid decomposition, see text). Right: genre heterogeneity from all three specifications, coloured as in @fig-integrated-coefs: M1 (per-draw SD of the 14 unpooled coefficients; includes estimation error and reads as an upper bound), M2 (hierarchical-prior τ), and M3 (multi-membership σ_s). Green band: equivalence benchmark (±1 slider point per hour; 0 to 1 for the non-negative heterogeneity parameters). Within-person posteriors sit inside the region; both between-person total-playtime posteriors lie mostly outside it, and the two pooled between-person heterogeneity parameters disagree (see text)."
@@ -2673,13 +2660,7 @@ ggplot(d_fig_draws, aes(x = value, y = param)) +
     strip.text = element_text(face = "bold")
   )
 ```
-
 :::
-
-
-Read against the registered analysis, the daily results replicate both registered conclusions once habitual play is measured in the units the benchmark assumes. Within persons, every estimate lies inside the equivalence region under every specification, and the same-day point estimate is positive, roughly double its biweekly counterpart in within-person standard-deviation units (`r round(d_r0$b1 / sesoi_d$s_w_ls, 3)` versus `r round(beta1_mean / sesoi_d$s_w_swemwbs, 3)` s~w~ per hour), though its resolution is fragile across robustness refits; the direction is consistent with the session-level affective uplift reported for this population [@vuorre2024affective] and with the positive causal estimates of @egami2024causal, and the magnitude is consistent with the registered conclusion that within-person playtime effects are practically negligible at both grains the present designs reach. Between persons the daily estimate leans negative inside the region, as the registered SWEMWBS estimate does at its own scale. The one credibly negative quantity in this family is the biweekly life-satisfaction ladder's between-person estimate (β = `r round(d_bridge_b2, 3)` rungs per hour, 95% CrI [`r round(d_bridge_b2_ci[1], 3)`, `r round(d_bridge_b2_ci[2], 3)`], `r round(100 * d_bridge_b2_rope, 1)`% inside its benchmark region), whose within-person counterpart stays practically null (β = `r round(d_bridge_b1, 3)`, 95% CrI [`r round(d_bridge_ci[1], 3)`, `r round(d_bridge_ci[2], 3)`]); whether that reflects the life-satisfaction construct, the two-week evaluative frame, or selection into habitual play is exactly the between-person question the registered follow-up should settle, and no design at this grain can.
-
-Several limits keep this analysis exploratory in substance as well as in label. It is unregistered, and its equivalence benchmark is constructed here rather than pre-registered: no anchor-based minimally important difference exists for this particular slider, so the region rests on a distribution-based rule and a proportional comparison to the registered threshold. The outcome is a single item, and one that is strongly affect-laden: it correlates `r sprintf("%.2f", d_ls_av_r)` with the momentary valence slider across responses (`r sprintf("%.2f", d_ls_av_rw)` within persons), so it sits closer to same-day affect than the biweekly ladder does. The diary panel is attrition-shaped (participation falls from `r print_num(d_day1_n)` responses on day 1 to `r print_num(d_day30_n)` on day 30, and missingness is handled by observed-data likelihood without multiple imputation), mobile play is unmeasured (the largest source of disagreement in the self-report control), and the same-day window closes at the response itself, so play later in the evening is invisible to that day's estimate, window length varies with response time, and satisfaction-so-far and play-so-far are measured contemporaneously, leaving temporal precedence unestablished within a day. These results are therefore a direction-setting replication at a finer grain, not confirmatory equivalence.
 
 ```{r}
 #| label: daily-claims-guard
@@ -2691,7 +2672,7 @@ Several limits keep this analysis exploratory in substance as well as in label. 
 # decomposition (within = same-day deviations, between = habitual daily
 # hours); benchmark d_primary = 1 slider point per hour (MID 5 / 5 h).
 # Values from the 2026-07-31 option-B refits; wording follows the
-# pre-committed rules in the released analysis plan.
+# pre-committed rules in the analysis plan (notes/, local).
 stopifnot(
   d_n_resp == 13039, d_n_pid == 763,
   abs(d_primary - 1) < 1e-12, d_mid_daily == 5,
@@ -2754,7 +2735,6 @@ stopifnot(
 )
 ```
 
-
 # Discussion
 
 This study asked two questions. First, is total playtime meaningfully associated with wellbeing when measured across multiple platforms with digital trace data? Second, does it matter what people play? The answer to the first question is no: both within-person fluctuations and between-person differences in playtime were practically equivalent to zero against the pre-registered threshold, replicating and extending prior findings from single-platform studies [@ballouRegisteredReportEvidence2024; @vuorreTimeSpentPlaying2022]. Because playtime was measured jointly across participants' console and PC platforms (the all-platform total, including mobile, reaches the same conclusion in the pre-registered sensitivity analysis), the recurring objection that single-platform nulls could be offset by effects hiding in unmeasured play does not apply here. The answer to the second is also, at this measurement resolution, no. Genre heterogeneity estimates fell at or below the smallest effect size of interest across three model specifications, genre terms did not improve out-of-sample prediction, and individual genre estimates were too imprecise to single out specific genres. One candidate explanation for the field's persistent aggregate null was that large, opposing genre effects cancel when averaged; our results do not support that account at the biweekly timescale. The registration asked whether it is justified to generalise video game effects across genres; for mental wellbeing, the answer is yes: the aggregate null generalises, tested directly rather than assumed [@yarkoniGeneralizabilityCrisis2019]. Disaggregating playtime by genre sharpened the picture without changing its substance, which redirects attention towards finer-grained characterisations of play.
@@ -2763,17 +2743,17 @@ This study asked two questions. First, is total playtime meaningfully associated
 
 H1 predicted that total playtime would not be meaningfully associated with wellbeing, and both components of the hypothesis were supported (see @fig-h1-all-models and @tbl-hypothesis-summary). Within persons, when participants played more than their own average in a given two-week wave, their wellbeing barely changed, consistent with previous digital trace studies, which have repeatedly found aggregate playtime to be a poor predictor of wellbeing fluctuations [@ballouRegisteredReportEvidence2024; @ballouPerceivedValueVideo2025; @larrieuHowGamingMotives2023]. Between persons, practical equivalence was likewise established. The between-person point estimate leans negative (individuals who play more on average report slightly lower wellbeing), but the association sits far below the threshold of practical significance and, as a between-person quantity, is vulnerable to confounding. The directional pattern, a within-person estimate centred on zero alongside a between-person estimate leaning negative, echoes the classic signature of selection: individuals with lower baseline wellbeing may simply spend more time gaming, rather than gaming causing lower wellbeing [@ballouPerceivedValueVideo2025].
 
-Life-events benchmarks put these magnitudes in context, provided the same standardisation is used: meta-analytic life-event effects are standardised on the total (between-person) variation in wellbeing, so here we standardise on the observed total SD of `r round(wemwbs_total_sd, 2)` rather than the within-person SD used in the Methods. On that scale, an association at the SESOI threshold corresponds to `r round(0.12 / wemwbs_total_sd, 2)` SD for a 2-hour/day change in play. This is below the meta-analytic effect of getting married on cognitive wellbeing (life satisfaction; approximately +0.26 SD [95% CI 0.17, 0.35]) and roughly a third of the effect of losing a job (approximately −0.43 SD [−0.48, −0.38]); on affective wellbeing, by contrast, marriage's immediate effect is near zero [@luhmann2012subjective]. The threshold thus sits below the typical major life event, as a minimally important difference should. The associations we actually observe fall an order of magnitude below the threshold itself: at the within-person point estimate, a 2-hour/day change corresponds to `r round(beta1_mean * 2, 3)` points, about `r round(abs(beta1_mean) * 2 / wemwbs_total_sd, 2)` SD, a plausible magnitude for a routine daily leisure activity whose cumulative impact is modulated by many other life factors.
+Life-events benchmarks put these magnitudes in context, provided the same standardisation is used: meta-analytic life-event effects are standardised on the total (between-person) variation in wellbeing, so here we standardise on the observed total SD of `r round(wemwbs_total_sd, 2)` rather than the within-person SD used in the Methods. On that scale, an association at the SESOI threshold corresponds to `r round(0.12 / wemwbs_total_sd, 2)` SD for a 2-hour/day change in play. This is below the meta-analytic effect of getting married on cognitive wellbeing (life satisfaction; approximately +0.26 SD \[95% CI 0.17, 0.35\]) and roughly a third of the effect of losing a job (approximately −0.43 SD \[−0.48, −0.38\]); on affective wellbeing, by contrast, marriage's immediate effect is near zero [@luhmann2012subjective]. The threshold thus sits below the typical major life event, as a minimally important difference should. The associations we actually observe fall an order of magnitude below the threshold itself: at the within-person point estimate, a 2-hour/day change corresponds to `r round(beta1_mean * 2, 3)` points, about `r round(abs(beta1_mean) * 2 / wemwbs_total_sd, 2)` SD, a plausible magnitude for a routine daily leisure activity whose cumulative impact is modulated by many other life factors.
 
 Inverting the estimates makes their practical magnitude concrete. For wellbeing to shift by the minimally important difference of 0.3 points (see Smallest Effect Size of Interest), the within-person point estimate implies that a player would need to sustain roughly `r round(0.3 / beta1_mean)` additional hours of play per day; even at the credible-interval bound most favourable to an effect, the required dose is `r round(0.3 / beta1_ci[2])` extra hours per day, which is more than the waking day contains and more extreme than the 10 additional daily hours that @vuorreTimeSpentPlaying2022 derived from game-level telemetry. Even if within-person effects accumulated across waves, which is an unrealistic assumption [cf. @vuorreTimeSpentPlaying2022], a player adding one hour of play every day would cross the noticeability threshold only after roughly `r round(0.3 / beta1_mean)` biweekly waves, or about `r round(0.3 / beta1_mean * 2 / 52, 1)` years. Between persons, the same inversion at the most favourable bound implies that two otherwise-similar people would need to differ by approximately `r round(0.3 / abs(beta2_ci[1]))` hours of habitual daily play, more than the roughly 5 hours of daily leisure time available, before their expected wellbeing differed noticeably.
 
 This directional pattern (between-person leaning negative, within-person null), however small in the present data, is not unique to gaming. It is a general feature of observational research with time-invariant confounding, well-documented in the social media and screen time literature and formalised as the ecological fallacy: the principle that between-person correlations do not necessarily reflect within-person processes [@robinson1950ecological; see @kievit2013simpsons for a review in psychological science; @rohrer2023within]. Qualitative evidence from the same dataset supports the selection interpretation: participants reported playing more during periods of illness or grief, consistent with lower wellbeing driving gaming uptake rather than the reverse [@ballou2025confounds]. @egami2024causal illustrate the stakes of this confounding within a single dataset: their preliminary association analysis showed a small negative correlation between gaming and mental health (higher psychological distress) even after covariate adjustment, whereas their causal analysis of the same data, exploiting console lotteries as a natural experiment, showed positive effects of 0.1 to 0.6 standard deviations.
 
-Beyond the average association, the model also bounds how much the person-specific association can vary. A standing objection to aggregate nulls is that a null mean may conceal subpopulations for whom playtime genuinely helps or harms [cf. @karhulahti2025claims]. The random-slope estimate speaks directly to this: person-specific within-person slopes are distributed with SD = `r round(sd_slope_mean, 3)` (95% CrI: [`r round(sd_slope_ci[1], 3)`, `r round(sd_slope_ci[2], 3)`]), and only `r round(sd_slope_p_above * 100, 1)`% of the posterior places this spread above the SESOI. Individuals in the tails of that distribution may still exceed the threshold, but the typical person-to-person deviation is smaller than the smallest effect we consider practically meaningful; this is the same conclusion the genre analysis reaches for content categories. At the biweekly timescale, the playtime null is not an artefact of averaging: it holds across persons as well as across genres.
+Beyond the average association, the model also bounds how much the person-specific association can vary. A standing objection to aggregate nulls is that a null mean may conceal subpopulations for whom playtime genuinely helps or harms [cf. @karhulahti2025claims]. The random-slope estimate speaks directly to this: person-specific within-person slopes are distributed with SD = `r round(sd_slope_mean, 3)` (95% CrI: \[`r round(sd_slope_ci[1], 3)`, `r round(sd_slope_ci[2], 3)`\]), and only `r round(sd_slope_p_above * 100, 1)`% of the posterior places this spread above the SESOI. Individuals in the tails of that distribution may still exceed the threshold, but the typical person-to-person deviation is smaller than the smallest effect we consider practically meaningful; this is the same conclusion the genre analysis reaches for content categories. At the biweekly timescale, the playtime null is not an artefact of averaging: it holds across persons as well as across genres.
 
 ## Genre-Specific Effects (H2)
 
-H2 predicted that genres would differ in their associations with wellbeing, some potentially positive and others potentially negative, with varying strength. This prediction was not supported: the data disconfirmed our own registered expectation. The primary multi-membership model estimates the between-genre standard deviation of within-person slopes at σ~s~ = `r round(sigma_sw_mean, 3)` (95% CrI: [`r round(sigma_sw_ci[1], 3)`, `r round(sigma_sw_ci[2], 3)`]), the hierarchical prior model's corresponding τ~genre~ = `r round(tau_mean, 3)` (95% CrI: [`r round(tau_ci[1], 3)`, `r round(tau_ci[2], 3)`]), and the pre-registered fixed-effects specification's coefficient SD = `r round(genre_sd_mean, 3)` (95% CrI: [`r round(genre_sd_ci[1], 3)`, `r round(genre_sd_ci[2], 3)`]). All three are estimated at or below the smallest effect size of interest, with `r round(tau_in_rope * 100, 1)`% of the τ~genre~ posterior inside the pre-registered ROPE, although the multi-membership σ~s~ retains roughly a fifth of its posterior mass above the threshold. Consistent with this, the pre-registered primary-genre joint Wald tests in the supplement fail to reject the hypothesis that all genre coefficients are equal, and the LOO comparison (Appendix D) shows that genre terms do not improve out-of-sample prediction; the complete-case joint test on the full-attribution exposures does detect a departure from exact within-person equality, but one whose magnitude sits well below the SESOI (Appendix D). Whatever genre-to-genre variation exists in the per-hour relationship with wellbeing, it is smaller than the smallest difference we deemed practically meaningful. Genres are, in these data, statistically distinguishable yet practically interchangeable, and that distinction shapes how the result should be read. Our registered prediction was disconfirmed with a magnitude attached rather than left simply unsupported: we expected genre to matter, and the pooled models now say how little it does.
+H2 predicted that genres would differ in their associations with wellbeing, some potentially positive and others potentially negative, with varying strength. This prediction was not supported: the data disconfirmed our own registered expectation. The primary multi-membership model estimates the between-genre standard deviation of within-person slopes at σ~s~ = `r round(sigma_sw_mean, 3)` (95% CrI: \[`r round(sigma_sw_ci[1], 3)`, `r round(sigma_sw_ci[2], 3)`\]), the hierarchical prior model's corresponding τ~genre~ = `r round(tau_mean, 3)` (95% CrI: \[`r round(tau_ci[1], 3)`, `r round(tau_ci[2], 3)`\]), and the pre-registered fixed-effects specification's coefficient SD = `r round(genre_sd_mean, 3)` (95% CrI: \[`r round(genre_sd_ci[1], 3)`, `r round(genre_sd_ci[2], 3)`\]). All three are estimated at or below the smallest effect size of interest, with `r round(tau_in_rope * 100, 1)`% of the τ~genre~ posterior inside the pre-registered ROPE, although the multi-membership σ~s~ retains roughly a fifth of its posterior mass above the threshold. Consistent with this, the pre-registered primary-genre joint Wald tests in the supplement fail to reject the hypothesis that all genre coefficients are equal, and the LOO comparison (Appendix D) shows that genre terms do not improve out-of-sample prediction; the complete-case joint test on the full-attribution exposures does detect a departure from exact within-person equality, but one whose magnitude sits well below the SESOI (Appendix D). Whatever genre-to-genre variation exists in the per-hour relationship with wellbeing, it is smaller than the smallest difference we deemed practically meaningful. Genres are, in these data, statistically distinguishable yet practically interchangeable, and that distinction shapes how the result should be read. Our registered prediction was disconfirmed with a magnitude attached rather than left simply unsupported: we expected genre to matter, and the pooled models now say how little it does.
 
 These estimates are upper bounds rather than failures to detect. Each pooled model estimates how much genre slopes could differ and places the bulk of that posterior below the SESOI, so the evidence constrains the magnitude of genre heterogeneity rather than merely failing to distinguish it from zero; the prior sensitivity analysis (Appendix D) shows the constraint is data-driven rather than an artefact of the hyperprior scale.
 
@@ -2781,13 +2761,17 @@ This conclusion carries a precision caveat. Equivalence claims are bounded by th
 
 The per-genre pattern is one of tight clustering rather than contrast. Under the hierarchical prior, the 14 within-person point estimates span only `r round(min(m2_hier_within$estimate), 3)` (`r m2_hier_within$genre[which.min(m2_hier_within$estimate)]`) to +`r round(max(m2_hier_within$estimate), 3)` (`r m2_hier_within$genre[which.max(m2_hier_within$estimate)]`); no estimate lies more than a third of the SESOI from zero. The most-played genres by total playtime (`r paste(head(rank14, 4), collapse = ", ")`; see @fig-genre-upset) sit inside this same narrow band, so the genres dominating everyday play show no meaningful association with wellbeing fluctuations from wave to wave; the rarely played genres are estimated with wide credible intervals even with partial pooling, contributing uncertainty rather than evidence of distinctive effects.
 
-The between-person genre coefficients offer a complementary perspective. Whereas the within-person coefficients describe how an individual's wellbeing shifts when they play more or less of a genre than their personal average, the between-person coefficients describe how individuals who habitually play more of a genre differ in average wellbeing from those who habitually play less. The between-person estimates are more vulnerable to confounding but also more directly comparable to the life-events literature, where comparisons are across people rather than within-person fluctuations. At the between-person level, the picture is qualitatively similar: most genre coefficients overlap both zero and the ROPE band, and per the pre-registered analysis plan we do not interpret differences between individual genre coefficients without formal post-hoc tests. Descriptively, the largest positive between-person point estimate belongs to Sport (`r round(sport_b$estimate, 3)`, 95% CrI [`r round(sport_b$conf.low, 3)`, `r round(sport_b$conf.high, 3)`] in M2), but its interval straddles both zero and the ROPE bound and is therefore formally inconclusive. Where a between-person estimate leans positive while its within-person counterpart is null, as for Sport (within-person `r round(sport_w$estimate, 3)`, 95% CrI [`r round(sport_w$conf.low, 3)`, `r round(sport_w$conf.high, 3)`]), the divergence is consistent with self-selection: people who favour sport games may, for example, be more physically or socially active, rather than the games themselves improving wellbeing. Between-person genre effects are small and imprecisely estimated, and should not be over-interpreted.
+The between-person genre coefficients offer a complementary perspective. Whereas the within-person coefficients describe how an individual's wellbeing shifts when they play more or less of a genre than their personal average, the between-person coefficients describe how individuals who habitually play more of a genre differ in average wellbeing from those who habitually play less. The between-person estimates are more vulnerable to confounding but also more directly comparable to the life-events literature, where comparisons are across people rather than within-person fluctuations. At the between-person level, the picture is qualitatively similar: most genre coefficients overlap both zero and the ROPE band, and per the pre-registered analysis plan we do not interpret differences between individual genre coefficients without formal post-hoc tests. Descriptively, the largest positive between-person point estimate belongs to Sport (`r round(sport_b$estimate, 3)`, 95% CrI \[`r round(sport_b$conf.low, 3)`, `r round(sport_b$conf.high, 3)`\] in M2), but its interval straddles both zero and the ROPE bound and is therefore formally inconclusive. Where a between-person estimate leans positive while its within-person counterpart is null, as for Sport (within-person `r round(sport_w$estimate, 3)`, 95% CrI \[`r round(sport_w$conf.low, 3)`, `r round(sport_w$conf.high, 3)`\]), the divergence is consistent with self-selection: people who favour sport games may, for example, be more physically or socially active, rather than the games themselves improving wellbeing. Between-person genre effects are small and imprecisely estimated, and should not be over-interpreted.
 
 The imprecision for rare genres is a data sparsity problem, not a theoretical one. Theory suggests these genres could relate to wellbeing through distinct pathways: visual novels prioritise narrative choice and eudaimonic engagement [@cole2021eudaimonic], and competitive genres like fighting games combine the competitive pressure that @adachiEffectViolentVideo2011 identified as the active ingredient in aggression effects with the potential for competence frustration [@ballou2023frustration]. Meaningfully estimating these effects would require either substantially larger samples or finer temporal resolution than the biweekly level used here.
 
 Our conclusion that genre labels may be too coarse a proxy for the psychologically relevant features of gameplay is supported by converging evidence. Our 13-mechanisms review [@ballouHowVideoGames2025] identifies exposures at three levels: context-centred (when, where, with whom), game-centred (what game, what features, what genre), and player-centred (why, how, what is experienced). Genre labels classify the game but say nothing about the context or the player's experience during play. Of the 13 proposed mechanisms through which gaming might affect wellbeing, most operate at the feature or player-experience level: need satisfaction depends on autonomy-supportive design features [@ballouBasicNeedsGames2023; @pengNeedSatisfactionSupportive2012], social capital depends on co-play relationships [@depping2018friendship; @vella2015playing], and affect regulation depends on the match between gameplay and current emotional state [@kosa2020escapism]. Genre labels cannot capture any of these, and dedicated taxonomies of structural game features now exist for characterising them directly [@sainiInvestigatingGamingStructural2023]. Converging proposals from cognitive neuroscience likewise argue for characterising games by underlying dimensions of play rather than by category labels [@nguyenPlayVideoGames2023]. Recent work demonstrates that even within a single game, behavioural variation in how players engage with mechanics and modes is associated with meaningful wellbeing differences when genre and total playtime are held constant [@hakman2026notallplay]. If within-game variation predicts wellbeing when genre is constant, genre labels are not the relevant unit of analysis.
 
 Together, these findings suggest a hierarchy of disaggregation for the gaming–wellbeing question. Aggregate playtime (the coarsest measure) consistently shows null associations. Genre-level disaggregation (this study) bounds genre heterogeneity below the threshold of practical significance, with individual genre estimates too imprecise to interpret. Within-game playstyle variation shows between-group wellbeing differences at the behavioural level [@hakman2026notallplay]. Session-level mood assessment detects affective uplift at the temporal scale of individual play sessions [@vuorre2024affective]. And causal designs find positive effects [@egami2024causal]. This bears directly on the call to unpack raw playtime into more informative measures [@ballouRegisteredReportEvidence2024]. Genre is the most accessible decomposition available, requiring only a lookup from title to label, and on these data it buys almost no wellbeing signal. The exploratory daily analysis supplies the hierarchy's intermediate step from within the same dataset: the within-person point estimate grows as the window narrows yet stays far below practical significance and is not decisively resolved in direction, and between-person contrasts stay inside the equivalence region once habitual play is measured in daily hours. Temporal proximity alone, without session-level measurement, recovers at most a suggestion of the direction the uplift literature reports. The pattern across this hierarchy is that effects emerge as measurement becomes more proximal to the actual psychological experience of play, a point we return to in the conclusion.
+
+## The Daily Timescale (Exploratory)
+
+The exploratory daily analysis reproduces both registered conclusions at the finer grain. Within persons, every estimate lies inside the equivalence region under every specification, and the same-day point estimate is positive, roughly double its biweekly counterpart in within-person standard-deviation units (`r round(d_r0$b1 / sesoi_d$s_w_ls, 3)` versus `r round(beta1_mean / sesoi_d$s_w_swemwbs, 3)` s~w~ per hour); the direction is consistent with the session-level affective uplift reported for this population [@vuorre2024affective] and with the positive causal estimates of @egami2024causal, though its resolution is fragile across the robustness refits (Appendix D) and it should be read as suggestive rather than resolved. Its practical magnitude is negligible under every reading: shifting daily life satisfaction by one minimally important difference (`r d_mid_daily` points) would require `r round(d_mid_daily / d_r0$b1)` additional hours of same-day play at the point estimate, beyond the waking day, and `r round(d_mid_daily / d_r0$b1_ci[2])` hours even at the credible bound most favourable to an effect, beyond the five hours of daily leisure the benchmark assumes. Between persons the daily estimate leans negative inside the equivalence region, as the registered SWEMWBS estimate does at its own scale; the one credibly negative quantity in this family is the biweekly life-satisfaction ladder's between-person estimate (β = `r round(d_bridge_b2, 3)` rungs per hour, 95% CrI \[`r round(d_bridge_b2_ci[1], 3)`, `r round(d_bridge_b2_ci[2], 3)`\], `r round(100 * d_bridge_b2_rope, 1)`% inside its benchmark region), whose within-person counterpart stays practically null (β = `r round(d_bridge_b1, 3)`, 95% CrI \[`r round(d_bridge_ci[1], 3)`, `r round(d_bridge_ci[2], 3)`\]). The between-person dimension is also the least settled: at the credible bound most favourable to an effect the dose reaches one minimally important difference within `r round(d_mid_daily / abs(d_r0$b2_ci[1]))` habitual hours per day, inside the realistic leisure range, and a habitual-play contrast is where selection, that people play more during worse periods of life, is least separable from any effect of play. Whether the negative lean reflects the life-satisfaction construct, the evaluative frame, or selection into habitual play is exactly the between-person question a registered follow-up should settle, and no design at this grain can.
 
 ## Limitations
 
@@ -2799,6 +2783,7 @@ Third, sample and platform coverage constrain the generalisability of our findin
 
 Fourth, our full-attribution approach to multi-genre games (deviation from pre-registration; see Appendix B, Deviation D1) assigns each game's full playtime to every one of its IGDB genre labels. While this better reflects the reality that many games genuinely span multiple genres, it also means that games with more genre labels contribute disproportionately to the sum of genre exposures and that each genre coefficient should be interpreted as the association between exposure to games carrying that label rather than the effect of the genre in isolation (see Multi-genre attribution in Measures). The pre-registered primary-genre-only analysis is reported in the supplementary materials and reaches the same conclusions: practical equivalence for both components of H1, and no significant genre differences under the pre-registered joint Wald tests.
 
+Fifth, the exploratory daily analysis carries limits of its own. It is unregistered, and its equivalence benchmark is constructed rather than pre-registered: no anchor-based minimally important difference exists for the daily slider, so the region rests on a distribution-based rule and a proportional comparison to the registered threshold. The outcome is a single, strongly affect-laden item, correlating `r sprintf("%.2f", d_ls_av_r)` with the momentary valence slider across responses (`r sprintf("%.2f", d_ls_av_rw)` within persons), and the diary panel is attrition-shaped, with missingness handled by observed-data likelihood without multiple imputation. Mobile play is unmeasured and dominates disagreement in the self-report positive control, the same-day window closes at the response itself, so evening play is invisible to that day's estimate, and play-so-far and satisfaction-so-far are measured contemporaneously, leaving temporal precedence unestablished within a day. These results are therefore a direction-setting replication at a finer grain, not confirmatory equivalence.
 
 ## Methodological Contributions
 
@@ -2836,13 +2821,12 @@ Data-sharing partners had no role in the design, analysis, or publication of res
 
 # References
 
-:::{#refs}
+::: {#refs}
 :::
 
 ```{=typst}
 #show: appendix.with()
 ```
-
 # Appendix A: Genre Mapping {.appendix}
 
 Genre labels from all three platforms resolve to the study taxonomy in two steps: Xbox store labels are first mapped onto IGDB genres (per the pre-registration's Appendix B), and raw IGDB labels (`r n_raw_genre_labels` distinct labels observed in the study metadata) are then collapsed into 14 analysis-level categories. @tbl-genre-mapping presents both steps in one place: each row is an implemented study genre, with the raw IGDB labels it subsumes, the Xbox store labels routed to it, and, where the pre-registered mapping (which would yield `r n_prereg_genres` distinct genres on the observed labels) treated a label differently, the pre-registered assignment. The implemented mapping diverges from the pre-registered one in both directions: it preserves granularity for sub-genres that prior literature treats as distinct (Hack-and-slash/Beat-'em-up, Point-and-click, Visual Novel), collapses more aggressively elsewhere (MOBA into Strategy, Card & Board Game into Puzzle, Pinball and Music into Arcade), and excludes Indie as a non-substantive label (see Appendix B, Deviation D2). Two details sit outside the table: the Xbox label Family + Kids has no IGDB equivalent and is resolved by the title's secondary genre, and IGDB includes no top-level "Action" category, so what is colloquially called "action" is distributed across Shooter, Hack-and-slash, Fighting, and Platform.
@@ -2883,8 +2867,8 @@ genre_map |>
 
 This appendix documents all known deviations from the Stage 1 pre-registration [@ballou2024psychological] in a single numbered scheme (D1–D9). Every deviation is presented in the structured disclosure format of Willroth and Atherton [-@willroth2024reporting], reporting the type of deviation, the original pre-registered wording, a description of what was done instead, the reason, the timing relative to data access and results, and the potential impact on interpretation. Related decisions are documented together rather than split across entries: prior specification is part of the inference-framework deviation (D4), the H2 model-structure decisions form a single deviation (D5), and the three changes that arose upstream during data collection (outside the authors' control and reported in full by @ballou2025openplay) are consolidated as D9. One unregistered correction, which implements the pre-registered plan more faithfully than the upstream data pipeline did, is documented last in the same format (U1).
 
-| # | Topic | Type | Timing |
-|:--|:-----------|:-------|:----------|
+| \# | Topic | Type | Timing |
+|:----------------|:--------------------|:----------------|:------------------|
 | D1 | Genre assignment (full attribution) | Data preparation | After data access, before results known |
 | D2 | Genre taxonomy (sub-genre collapsing) | Data preparation | After data access, before results known |
 | D3 | Telemetry–survey alignment | Variables | After data access, before results known |
@@ -2901,7 +2885,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D1: Genre assignment (full attribution)
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Data preparation |
 | **Original wording** | Games are classified by their primary (first) IGDB genre. The pre-registration does not specify how to handle multi-genre games beyond this. |
 | **Deviation description** | Each game's full playtime is attributed to every one of its IGDB genre labels (all labels retained; up to `r max_raw_labels` raw labels per game observed in the metadata). A game with 2 hours of play and two genre labels (e.g., Adventure + RPG) contributes 2 hours to each genre. Genre hours therefore represent total exposure to games carrying that label and are not mutually exclusive: summing across genres exceeds total playtime. Total playtime for H1 is computed separately from raw sessions without genre duplication. An earlier draft capped attribution at 3 genres per game; the cap was removed because `r round(pct_games_gt3_labels)`% of games with any genre label carry more than 3 raw IGDB labels and truncation discards classification information. |
@@ -2912,7 +2896,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D2: Genre taxonomy (sub-genre collapsing)
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Data preparation |
 | **Original wording** | The pre-registration collapses IGDB sub-genres as follows: Hack and slash/Beat 'em up → Action; Point-and-click and Visual Novel → Adventure; Turn-based strategy, Real-time strategy, and Tactical → Strategy; Quiz/Trivia → Puzzle. |
 | **Deviation description** | Hack-and-slash/Beat-'em-up, Point-and-click, and Visual Novel are retained as distinct categories; MOBA is folded into Strategy; Card & Board Game joins Quiz/Trivia under Puzzle; Pinball and Music are folded into Arcade; Indie is excluded as a non-substantive label. The implemented taxonomy comprises 14 analysis-level categories (full mapping in Appendix A of this manuscript). The metadata contain `r n_raw_genre_labels` distinct raw IGDB labels; the pre-registration's body text mentions 19 IGDB genres while its own Appendix A lists all 23, and we report the count as observed in the data. |
@@ -2923,7 +2907,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D3: Telemetry–survey alignment
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Variables |
 | **Original wording** | Not specified; the pre-registration implicitly assumes wave windows counted forward from the baseline day (days 0–83). |
 | **Deviation description** | Playtime windows are aligned retrospectively to the survey: each wave's playtime covers the 14 days ending the day before the biweekly survey, so wave 1 covers days −14 to −1 relative to baseline. Pre-baseline telemetry is available for all three platforms because participants linked their accounts at intake. |
@@ -2934,10 +2918,10 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D4: Inference framework and priors (frequentist → Bayesian)
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Inferential criteria |
 | **Original wording** | H1 will be tested via equivalence test with SESOI = ±0.06 SWEMWBS points per 1-hour change in daily playtime, using 90% CIs (TOST procedure). H2 will be tested via a joint Wald test via `car::linearHypothesis()`. The pre-registration specifies no priors (all models frequentist). |
-| **Deviation description** | Both H1 and H2 are estimated using Bayesian multilevel models [`brms`; @burkner2017brms] rather than frequentist `lmer`. H1 is evaluated via ROPE analysis with bounds identical to the pre-registered SESOI [−0.06, +0.06]; if >95% of the posterior falls within the ROPE, practical equivalence is established [@kruschke2018rejecting]. H2 is evaluated through posterior genre-heterogeneity parameters ($\sigma_s$ in M3, $\tau$ in M2, the SD of coefficients in M1), with magnitude judged against the SESOI. Because the pre-registration specifies no priors, these were chosen as weakly informative on the 1–5 item-mean outcome scale: Student-*t*(3, 0, 0.5) on fixed-effect coefficients, Student-*t*(3, 3, 2) on the intercept, Half-Normal(0, 0.1) on M2's $\tau$ hyperparameters, Half-Normal(0, 0.3) on M3's $\sigma_s$ (looser to accommodate the more challenging multi-membership posterior geometry), and `brms` defaults on remaining variance components. The pre-registered frequentist models (TOST and joint Wald tests) are reported in full in the pre-registered analysis supplement. |
+| **Deviation description** | Both H1 and H2 are estimated using Bayesian multilevel models \[`brms`; @burkner2017brms\] rather than frequentist `lmer`. H1 is evaluated via ROPE analysis with bounds identical to the pre-registered SESOI \[−0.06, +0.06\]; if \>95% of the posterior falls within the ROPE, practical equivalence is established [@kruschke2018rejecting]. H2 is evaluated through posterior genre-heterogeneity parameters ($\sigma_s$ in M3, $\tau$ in M2, the SD of coefficients in M1), with magnitude judged against the SESOI. Because the pre-registration specifies no priors, these were chosen as weakly informative on the 1–5 item-mean outcome scale: Student-*t*(3, 0, 0.5) on fixed-effect coefficients, Student-*t*(3, 3, 2) on the intercept, Half-Normal(0, 0.1) on M2's $\tau$ hyperparameters, Half-Normal(0, 0.3) on M3's $\sigma_s$ (looser to accommodate the more challenging multi-membership posterior geometry), and `brms` defaults on remaining variance components. The pre-registered frequentist models (TOST and joint Wald tests) are reported in full in the pre-registered analysis supplement. |
 | **Reason** | A Bayesian framework provides richer equivalence testing via ROPE and continuous uncertainty quantification; the priors regularise estimation without strongly constraining the posterior. |
 | **Timing** | After data access, before results of the pre-registered approach were known |
 | **Reader impact** | The SESOI is unchanged and the ROPE procedure provides a continuous measure of practical equivalence rather than a binary significance decision. Risk of bias is low: the equivalence region is identical and the deviation was decided before results were known. More diffuse priors could permit larger heterogeneity estimates; prior sensitivity could be assessed by varying the prior scales. |
@@ -2945,7 +2929,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D5: H2 model specifications
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Analytic approach |
 | **Original wording** | H2 uses genre-specific fixed-effect coefficients with a random intercept and uncorrelated random slopes for all within-person genre predictors (zero-correlation syntax), tested via a joint Wald test. The pre-registration anticipates identifiability issues and specifies dropping random slopes if the model is singular. |
 | **Deviation description** | Three related decisions. (a) The pre-registered random slopes (14 genres × 2 dimensions = 28 slope parameters) render the model near-singular; the random-intercept-only contingency was applied, as pre-registered. (b) Two additional specifications were added: M2 replaces the independent priors on genre coefficients with a learned hierarchical prior ($\tau$), and M3 is a multi-membership random-effects model in which genre modulates the total playtime slope via composition weights, adopted as the primary H2 analysis. (c) For M3, each wave's membership weights are that wave's genre shares of total genre-attributed playtime; waves with zero playtime receive uniform weights (1/K), a technical requirement of `brms::mm()`. |
@@ -2956,7 +2940,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D6: H1 platform scope (mobile excluded)
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Variables |
 | **Original wording** | H1 will test the association between total cross-platform playtime and wellbeing, using data from all five platforms (Nintendo, Xbox, Steam, iOS, Android). |
 | **Deviation description** | H1 total playtime is computed from Nintendo, Xbox, and Steam only, excluding iOS and Android. Mobile platforms provide only daily aggregate minutes without game-level data (D9). Including mobile for H1 but not H2 would mean "total playtime" refers to different quantities across hypotheses. |
@@ -2967,7 +2951,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D7: Outcome measure and scoring
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Variables |
 | **Original wording** | General mental wellbeing will be measured with the WEMWBS (Tennant et al., 2007). |
 | **Deviation description** | The instrument administered in the Open Play study is the short-form SWEMWBS (7 items, each scored 1–5), an upstream design decision documented by @ballou2025openplay. The score is computed as the **item mean** (`rowMeans` of the 7 items, range 1–5), not the summed score (range 7–35). The pre-registered SESOI of 0.06 per hour/day was derived by Ballou, Sewall, et al. (2024) on the 1–5 item-mean scale (0.3 minimally important difference ÷ 5 hours of realistic daily leisure), and the pre-registration's own precision analysis assumes a within-person SD of 0.7, which is only coherent on the 1–5 scale. An earlier version of this analysis used `rowSums`, which inflated coefficients by a factor of 7 relative to the scale the SESOI was defined on. |
@@ -2978,7 +2962,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D8: Missing data handling
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Analytic approach |
 | **Original wording** | Missing data: multiple imputation via `mice` package (predictive mean matching, wide format). Report both complete-case and imputed results. |
 | **Deviation description** | Outcome missingness has two components. Among submitted surveys, `r n_md_item_miss` responses (`r round(100 * n_md_item_miss / n_md_submitted, 1)`% of `r formatC(n_md_submitted, format = "d", big.mark = ",")` in the analytic sample) are missing SWEMWBS, all with every item missing. The larger component is wave nonresponse: `r formatC(n_md_wave_miss, format = "d", big.mark = ",")` of `r formatC(n_md_grid, format = "d", big.mark = ",")` person-waves (`r pct_md_wave_miss`%) in the analytic sample were never submitted (response declined from `r wave_response$pct[1]`% at wave 1 to `r wave_response$pct[6]`% at wave 6). Instead of the pre-registered single-level wide-format PMM, we imputed on the complete participant × wave grid with hierarchical two-level MICE (`2l.pmm`, participants as clusters, ±1-wave lag/lead terms, fully observed exposures with explicit person means, intake auxiliaries), the protocol shared with the programmatic RR's other Stage 2 outputs; the number of imputations follows von Hippel's (2020) rule from the pilot fraction of missing information. The primary Bayesian models remain fit to observed outcomes (valid under MAR given the modelled covariates and random effects); pooled frequentist counterparts on the imputed data are reported in Appendix D. The imputation grid covers the analytic sample; `r n_distinct(biw_md6$pid) - n_md_pids` surveyed participants with no valid SWEMWBS in any wave provide no outcome information to anchor imputation and are outside both the analytic sample and the grid. |
@@ -2989,7 +2973,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### D9: Upstream data-collection changes
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Data collection procedures |
 | **Original wording** | Age range 18–75 (UK) and 18–30 (US); ≥75% of gaming time on included platforms; Android telemetry collected as session-level exports via ActivityWatch. |
 | **Deviation description** | Three changes made by the Open Play team during data collection, before this study's data access: (a) screening admitted ages 18–40 in both regions; (b) the platform coverage threshold was lowered to ≥50%; (c) Android data were collected as daily aggregate minutes via Digital Wellbeing screenshots rather than session-level exports. All three are reported in full by @ballou2025openplay. |
@@ -3002,7 +2986,7 @@ This appendix documents all known deviations from the Stage 1 pre-registration [
 ### U1: Xbox genre mapping correction
 
 | Field | Content |
-|:----|:------------------|
+|:-----------------|:-----------------------------------------------------|
 | **Type** | Data preparation (correction, consistent with the pre-registration) |
 | **Original wording** | Xbox genres are mapped onto the IGDB taxonomy via the mapping table in the pre-registration's Appendix B. |
 | **Deviation description** | The upstream Open Play preprocessing pipeline (`label_genres.R`) failed to map approximately `r round(100 - xbox_pct_before)`% of Xbox playtime to IGDB genres due to a string-formatting bug (exact-match against multi-value and inconsistently-formatted genre strings). We applied a corrected mapping in our preprocessing using the `xbox_primary_genre` and `xbox_subgenre` metadata fields, recovering genre information for an additional `r round(xbox_min_rescued / 1e6, 1)` million minutes of Xbox playtime. This is a fix, not a deviation: the pre-registration explicitly specified the Xbox-to-IGDB mapping, and the correction implements it as intended. |
@@ -3175,8 +3159,7 @@ sens_h1_max_diff <- max(abs(c(sens_b1_mean - beta1_mean, sens_b2_mean - beta2_me
 stopifnot(sens_h1_max_diff < 0.01)
 ```
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: tbl-sensitivity-demo
 #| tbl-cap: "Primary versus demographic-adjusted estimates. H1 rows compare M0's total-playtime coefficients with the same coefficients after adding age, gender, and ethnicity. H2 rows compare M1's genre heterogeneity statistic (SD of the 14 genre coefficients per draw) with its adjusted counterpart. Estimates in SWEMWBS item-mean points per hour/day."
@@ -3206,10 +3189,9 @@ tibble(
   )
 ) |> tt()
 ```
-
 :::
 
-The adjusted models use `r formatC(n_sens_obs, format = "d", big.mark = ",")` observations from `r formatC(n_sens_pids, format = "d", big.mark = ",")` participants with complete demographic data. @tbl-sensitivity-demo compares the primary and covariate-adjusted estimates. The H1 coefficients shift by at most `r round(sens_h1_max_diff, 3)` points after adjustment, and the ROPE conclusions are unchanged: `r round(sens_b1_in_rope * 100, 1)`% of the adjusted within-person posterior falls inside the ROPE (primary: `r round(beta1_in_rope * 100, 1)`%), and `r round(sens_b2_in_rope * 100, 1)`% of the adjusted between-person posterior (primary: `r round(beta2_in_rope * 100, 1)`%). One qualification: the adjusted between-person credible interval ([`r round(sens_b2_ci[1], 3)`, `r round(sens_b2_ci[2], 3)`]) excludes zero, unlike the unadjusted interval; this small negative association remains far inside the ROPE and is consistent with the selection account discussed under H1. The genre heterogeneity estimates are likewise essentially unaffected. Both adjusted models converged cleanly (max R-hat = `r round(sens_diag_rhat, 3)`, `r sens_diag_divs` divergent transitions). Demographic composition therefore does not account for the observed associations.
+The adjusted models use `r formatC(n_sens_obs, format = "d", big.mark = ",")` observations from `r formatC(n_sens_pids, format = "d", big.mark = ",")` participants with complete demographic data. @tbl-sensitivity-demo compares the primary and covariate-adjusted estimates. The H1 coefficients shift by at most `r round(sens_h1_max_diff, 3)` points after adjustment, and the ROPE conclusions are unchanged: `r round(sens_b1_in_rope * 100, 1)`% of the adjusted within-person posterior falls inside the ROPE (primary: `r round(beta1_in_rope * 100, 1)`%), and `r round(sens_b2_in_rope * 100, 1)`% of the adjusted between-person posterior (primary: `r round(beta2_in_rope * 100, 1)`%). One qualification: the adjusted between-person credible interval (\[`r round(sens_b2_ci[1], 3)`, `r round(sens_b2_ci[2], 3)`\]) excludes zero, unlike the unadjusted interval; this small negative association remains far inside the ROPE and is consistent with the selection account discussed under H1. The genre heterogeneity estimates are likewise essentially unaffected. Both adjusted models converged cleanly (max R-hat = `r round(sens_diag_rhat, 3)`, `r sens_diag_divs` divergent transitions). Demographic composition therefore does not account for the observed associations.
 
 ## Prior Sensitivity
 
@@ -3259,8 +3241,7 @@ stopifnot(all(abs(ps_all$median[ps_all$parameter == "tau_within"] -
 
 The heterogeneity hyperpriors are the component of the specification where prior choice could most plausibly shape the H2 conclusion, since the Half-Normal(0, 0.1) prior on M2's τ places its own median near the SESOI. As committed to in Deviation D4, we therefore refit M2 with the hyperprior scale halved and doubled (0.05, 0.20) and M3 with its σ~s~ scale halved and doubled (0.15, 0.60), using otherwise identical specifications (`R/03_prior_sensitivity.R`).
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: tbl-prior-sensitivity
 #| tbl-cap: "Prior sensitivity for the genre heterogeneity parameters. Each row is a full refit at the hyperprior scale shown; bolded scales are those reported in the main results. P(< SESOI) is the posterior probability that the parameter is below 0.06."
@@ -3285,7 +3266,6 @@ tt(ps_disp |> select(-base)) |>
   style_tt(i = which(ps_disp$base), j = "Hyperprior scale", bold = TRUE) |>
   style_tt(fontsize = 0.85)
 ```
-
 :::
 
 @tbl-prior-sensitivity shows that the heterogeneity conclusions are not an artefact of the hyperprior scales. Both parameters are essentially unchanged when their hyperprior scales are halved or doubled: M2's τ estimates agree to the third decimal across the fourfold range of scales, and M3's σ~s~ posterior median and its posterior mass below the SESOI shift only trivially. This is consistent with both posteriors being strongly data-dominated (the posterior SDs are roughly a tenth of the corresponding prior SDs). Across all specifications and scales, the qualitative conclusion is the same as in the main analysis: genre heterogeneity at or below the smallest effect size of interest.
@@ -3441,8 +3421,7 @@ stopifnot(sd_within_cc < 0.06, sd_within_imp < 0.06)
 
 The pre-registration specified multiple imputation by chained equations with predictive mean matching. We implemented the two-level grid protocol described in Methods (Missing Data): across the `r formatC(n_grid_cells, format = "d", big.mark = ",")`-cell participant × wave grid, `r formatC(n_grid_missing, format = "d", big.mark = ",")` cells (`r pct_grid_missing`%) had no observed SWEMWBS (@tbl-missingness-wave), and m = `r m_imp` imputed datasets were generated. The pilot fractions of missing information for the H1 coefficients were `r round(imp_meta$fmi_pilot$fmi[imp_meta$fmi_pilot$term == "tt_within"], 2)` (within-person) and `r round(imp_meta$fmi_pilot$fmi[imp_meta$fmi_pilot$term == "tt_between"], 2)` (between-person): the between-person coefficient depends on person means that are genuinely uncertain for participants with few observed waves, and Rubin's rules propagate that uncertainty into the pooled intervals. `r if (imp_meta$m_needed > m_imp) sprintf("Von Hippel's rule would require %d imputations for a %.0f%%-stable standard error; with m = %d the achieved coefficient of variation of the pooled standard errors is approximately %.2f, which widens the pooled intervals slightly but does not affect the equivalence verdicts.", imp_meta$m_needed, 100 * 0.05, m_imp, imp_meta$se_cv_achieved) else sprintf("This satisfies von Hippel's requirement of %d imputations.", imp_meta$m_needed)`
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: tbl-missingness-wave
 #| tbl-cap: "SWEMWBS missingness by wave on the full participant × wave grid (analytic sample). Wave 1 was completed on the baseline day; later waves show progressive nonresponse."
@@ -3460,11 +3439,9 @@ miss_wave |>
   format_tt(digits = 1) |>
   style_tt(fontsize = 0.85)
 ```
-
 :::
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: tbl-sensitivity-imputation
 #| tbl-cap: !expr 'sprintf("Complete-case versus multiply imputed estimates (m = %d; Rubin-pooled with Barnard-Rubin degrees of freedom). H1 rows: total-playtime coefficients from identical frequentist REWB models, with equivalence verdicts applying the pre-registered rule (90%% CI within a SESOI of 0.06). H2 rows: joint tests of genre-coefficient equality (complete-case Wald chi-square; imputed pooled D1 F-test) and the SD of the 14 genre coefficients.", m_imp)'
@@ -3519,7 +3496,6 @@ bind_rows(h1_rows, h2_rows) |>
   tt() |>
   style_tt(fontsize = 0.8)
 ```
-
 :::
 
 @tbl-sensitivity-imputation compares complete-case and pooled imputed results. The H1 conclusions are unchanged: both pooled 90% confidence intervals fall entirely within the pre-registered equivalence bounds of ±0.06, so practical equivalence holds on the imputed data. The between-person interval widens under imputation, reflecting that person-mean wellbeing is uncertain for participants with few observed waves.
@@ -3622,8 +3598,7 @@ loo_tbl <- as.data.frame(loo_comp) |>
   )
 ```
 
-::: {.place arguments='auto, scope: "parent", float: true'}
-
+::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: tbl-loo-comparison
 #| tbl-cap: "Leave-one-out cross-validation. Models ordered by expected log predictive density (ELPD); negative dELPD indicates worse out-of-sample prediction than the best-fitting model. SE(d) = standard error of the difference."
@@ -3634,14 +3609,17 @@ loo_tbl |>
   tt() |>
   style_tt(fontsize = 0.8)
 ```
-
 :::
 
-M0, the model with total playtime only, showed the highest expected log predictive density, and all three genre specifications predicted slightly worse out-of-sample (@tbl-loo-comparison), with ELPD deficits between one and roughly two standard errors of the difference. Adding genre information, in any of the three specifications, therefore does not improve the prediction of wellbeing over total playtime alone. Pareto-$k$ diagnostics flagged `r round(min(pareto_pct_bad), 1)`–`r round(max(pareto_pct_bad), 1)`% of observations per model ($k$ > 0.7; `r round(min(pareto_n_bad))`–`r round(max(pareto_n_bad))` observations), so the ELPD values are approximate; this affects the precision of the differences, not the ordering. The inferential reach of this comparison is considered in the Discussion.
+M0, the model with total playtime only, showed the highest expected log predictive density, and all three genre specifications predicted slightly worse out-of-sample (@tbl-loo-comparison), with ELPD deficits between one and roughly two standard errors of the difference. Adding genre information, in any of the three specifications, therefore does not improve the prediction of wellbeing over total playtime alone. Pareto-$k$ diagnostics flagged `r round(min(pareto_pct_bad), 1)`–`r round(max(pareto_pct_bad), 1)`% of observations per model ($k$ \> 0.7; `r round(min(pareto_n_bad))`–`r round(max(pareto_n_bad))` observations), so the ELPD values are approximate; this affects the precision of the differences, not the ordering. The inferential reach of this comparison is considered in the Discussion.
 
 ## Pre-Registered Frequentist Analysis
 
 The full pre-registered analysis (primary-genre attribution, frequentist within-between models fit with `lmer`, TOST equivalence tests for H1, joint Wald tests for H2, and multiple imputation via `mice` alongside complete-case results) is reported in the supplementary materials as a standalone document. It also retains the pre-registered all-platform total playtime measure (including iOS and Android; Appendix B, Deviation D6), providing the comparison between console/PC-only and all-platform H1 estimates.
+
+## Daily-Timescale Sensitivity Analyses
+
+Four sensitivity refits and one comparison model accompany the exploratory daily analysis (see Exploratory Daily-Timescale Analysis in Methods). Allowing first-order autocorrelated residuals with a within-person day trend (estimated AR(1) = `r round(d_ar1, 2)`) widens the within-person interval past zero (β = `r round(d_r0a$b1, 2)`, 95% CrI \[`r round(d_r0a$b1_ci[1], 2)`, `r round(d_r0a$b1_ci[2], 2)`\]), as does adjusting for window length (β = `r round(d_r0w$b1, 2)`, 95% CrI \[`r round(d_r0w$b1_ci[1], 2)`, `r round(d_r0w$b1_ci[2], 2)`\]). Excluding the 8% of Xbox sessions recorded with date-only timestamps, whose start times are floored to midnight and whose minutes are spread uniformly over the recorded day, leaves the within-person interval above zero (β = `r round(d_rx_b1, 2)`, 95% CrI \[`r round(d_rx_b1_ci[1], 2)`, `r round(d_rx_b1_ci[2], 2)`\]). The all-responses refit, which retains every diary response and scores unobserved play as zero, gives the same between-person lean as the analysed sample (β = `r round(d_r0f$b2, 2)`, 95% CrI \[`r round(d_r0f$b2_ci[1], 2)`, `r round(d_r0f$b2_ci[2], 2)`\]). The comparison model fits the registered M0 structure to the biweekly life-satisfaction ladder (0–10), whose leisure-anchored benchmark on that scale is 0.15 rungs per hour (7.5% of the 10-point range over five leisure hours); its within-person estimate is practically null (β = `r round(d_bridge_b1, 3)`, 95% CrI \[`r round(d_bridge_ci[1], 3)`, `r round(d_bridge_ci[2], 3)`\], `r round(100 * d_bridge_rope, 1)`% inside the region), while its between-person estimate is credibly negative (β = `r round(d_bridge_b2, 3)`, 95% CrI \[`r round(d_bridge_b2_ci[1], 3)`, `r round(d_bridge_b2_ci[2], 3)`\], `r round(100 * d_bridge_b2_rope, 1)`% inside). Two qualifications apply to the daily genre-level intervals: they inherit the exchangeable-residual assumption that the autocorrelation refit relaxes for the total-playtime model only, and the hierarchical-prior model's `r d_r2$divs` divergent transitions followed a documented step-size escalation, with estimates stable across both settings.
 
 # Appendix E: Hypothesis Test Summaries {.appendix}
 
@@ -3722,7 +3700,7 @@ The exploratory daily-timescale analogue of this summary is given in @tbl-daily-
 
 ```{r}
 #| label: tbl-daily-summary
-#| tbl-cap: "Exploratory daily-timescale hypothesis tests (see Exploratory Analysis: The Daily Timescale): posterior estimates, 95% credible intervals, posterior mass inside the equivalence region (±1 slider point per hour; within-person rows are per hour of same-day play, between-person rows per hour of habitual daily play; heterogeneity parameters are non-negative, so shares are mass below 1), and convergence diagnostics. M1 rows are per-draw SDs across the 14 unpooled genre coefficients and include estimation error."
+#| tbl-cap: "Exploratory daily-timescale hypothesis tests (see Exploratory Results: The Daily Timescale): posterior estimates, 95% credible intervals, posterior mass inside the equivalence region (±1 slider point per hour; within-person rows are per hour of same-day play, between-person rows per hour of habitual daily play; heterogeneity parameters are non-negative, so shares are mass below 1), and convergence diagnostics. M1 rows are per-draw SDs across the 14 unpooled genre coefficients and include estimation error."
 #| echo: false
 #| eval: true
 
