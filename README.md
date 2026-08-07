@@ -6,7 +6,32 @@ Oxford Internet Institute · Tilburg University · Karolinska Institute
 
 ---
 
-Stage 2 of Study 3 from an accepted PCI Registered Reports programmatic registered report (Ballou et al., *Psychological Wellbeing, Sleep, and Video Gaming: Analyses of Comprehensive Digital Traces*). We test whether total cross-platform gaming playtime is meaningfully associated with mental wellbeing (H1), and whether that association varies by game genre (H2), using multi-platform digital trace data and biweekly self-report surveys from the Open Play longitudinal dataset.
+This repository contains the analysis code and manuscript for Stage 2 of Study 3 from an accepted PCI Registered Reports programmatic registered report (Ballou et al., *Psychological Wellbeing, Sleep, and Video Gaming: Analyses of Comprehensive Digital Traces*). We test whether total cross-platform gaming playtime is meaningfully associated with mental wellbeing (H1), and whether that association varies by game genre (H2), using multi-platform digital trace data and biweekly self-report surveys from the Open Play longitudinal dataset.
+
+**Read the rendered manuscript:** <https://thomhak.github.io/open-play-genres/>
+([PDF](https://thomhak.github.io/open-play-genres/manuscript.pdf) · [DOCX](https://thomhak.github.io/open-play-genres/manuscript.docx))
+
+**Stage 1 Registered Report (pre-registration):** <https://osf.io/mvngt/>
+
+## Getting started
+
+The best entry point is the rendered manuscript linked above. Key repository components:
+
+- `manuscript.qmd` — the full manuscript (introduction, methods, analysis code, results, discussion)
+- `supplement_model_output.qmd` — supplement with full posterior summaries for the four Bayesian models
+- `R/01_preprocess.R` — preprocessing pipeline (multi-genre full attribution)
+- `R/02_impute_wemwbs.R` — two-level MICE imputation of SWEMWBS on the person × wave grid
+- `models/` — cached model fits (not tracked by git; regenerated on first render)
+- `bibliography.bib` — references
+- `renv.lock` — R package version specifications
+
+## Data
+
+Gameplay telemetry and survey data are from the **Open Play** longitudinal dataset (v1.1.0), available on Zenodo:
+
+> Ballou, N., et al. (2025). *Open Play: A longitudinal dataset of video game play and psychological wellbeing*. Zenodo. https://zenodo.org/records/18430947
+
+The dataset covers multi-platform gaming telemetry (Nintendo Switch, Xbox, Steam, iOS, Android) and biweekly wellbeing surveys. Data files are not stored in this repository; run `make data` to download them into `data/clean/`. See the [Open Play repository](https://github.com/digital-wellbeing/open-play) for full documentation of the data cleaning pipeline.
 
 ## Reproducing the analysis
 
@@ -29,13 +54,7 @@ Rscript R/02_impute_wemwbs.R
 quarto render manuscript.qmd
 ```
 
-**Note on first run:** The manuscript fits four Bayesian models via `brms`. On a first render (no cached model files), this takes roughly **24+ hours** depending on hardware. Fitted models are cached as `.rds` files in `models/`, and the multiple imputation is cached in `data/processed/imputation/` (neither tracked by git; the manuscript regenerates the imputation automatically if the cache is missing). Subsequent renders load the cached fits and complete in minutes.
-
-## Preprint site
-
-The rendered HTML (with links to PDF and DOCX) is published via GitHub Pages from the `docs/` folder:
-
-<https://thomhak.github.io/open-play-genres/>
+**Note on first run:** The manuscript fits four Bayesian models via `brms`. On a first render (no cached model files), this takes roughly **24+ hours** depending on hardware. Fitted models are cached as `.rds` files in `models/`, and the multiple imputation is cached in `data/processed/imputation/` (neither tracked by git; the manuscript regenerates the imputation automatically if the cache is missing). Subsequent renders load the cached fits and complete in minutes. Delete `models/` to refit everything from scratch.
 
 ## Repository structure
 
@@ -43,12 +62,15 @@ The rendered HTML (with links to PDF and DOCX) is published via GitHub Pages fro
 manuscript.qmd                  Main manuscript (introduction, methods, analysis, discussion)
 supplement_model_output.qmd     Supplement: full posterior summaries for the four Bayesian models
 bibliography.bib                References
-_quarto.yml                     Quarto project config
+_quarto.yml                     Quarto project config (renders to docs/ for GitHub Pages)
 Makefile                        Downloads data from Zenodo
 renv.lock                       R dependency lockfile
+docs/                           Published site (manuscript HTML, PDF, DOCX)
 R/
   01_preprocess.R               Preprocessing pipeline (multi-genre full attribution)
+  01_preprocess_prereg.R        Frozen pre-registered pipeline (primary genre only)
   02_impute_wemwbs.R            Two-level MICE imputation of SWEMWBS on the person x wave grid
+  03_prior_sensitivity.R        Prior sensitivity analysis
   04_daily_aggregate.R          Daily diary exposure pipeline (same-day windows; exploratory analysis)
   fit_daily_models.R            Fits the exploratory daily models (caches to models/daily/)
   fit_sensitivity_models.R      Fits the demographic sensitivity models (caches to models/)
@@ -57,21 +79,9 @@ R/
 _extensions/                    Quarto typst preprint extension (mvuorre/preprint)
 ```
 
-## Data
-
-Gameplay telemetry and survey data are from the **Open Play** longitudinal dataset (v1.1.0), available on Zenodo:
-
-> Ballou, N., et al. (2025). *Open Play: A longitudinal dataset of video game play and psychological wellbeing*. Zenodo. https://zenodo.org/records/18430947
-
-Data files are not stored in this repository. Run `make data` to download them into `data/clean/`.
-
 ## Deviations from pre-registration
 
-The main analysis assigns **all IGDB genres** to each game rather than only the primary genre, as pre-registered, and uses Bayesian rather than frequentist inference. Missing outcomes are multiply imputed with the hierarchical two-level protocol shared with the programmatic RR's sibling Stage 2 studies (`R/02_impute_wemwbs.R`), reported as a sensitivity analysis. All deviations are documented in the manuscript's deviation appendix (Appendix B). The full pre-registered analysis — primary-genre attribution, frequentist `lmer` models, TOST equivalence tests, joint Wald tests, and multiple imputation — is reported in a standalone supplement accompanying the manuscript.
-
-## Pre-registration
-
-This study was pre-registered as part of a Stage 1 Programmatic Registered Report. Pre-registration materials are available at <https://osf.io/mvngt/>.
+The main analysis assigns **all IGDB genres** to each game rather than only the primary genre, as pre-registered, and uses Bayesian rather than frequentist inference. Missing outcomes are multiply imputed with the hierarchical two-level protocol shared with the programmatic RR's sibling Stage 2 studies (`R/02_impute_wemwbs.R`), reported as a sensitivity analysis. All deviations are documented in the manuscript's deviation appendix (Appendix B). The full pre-registered analysis (primary-genre attribution, frequentist `lmer` models, TOST equivalence tests, joint Wald tests, and multiple imputation) is reported in a standalone supplement accompanying the manuscript.
 
 ## Authors
 
@@ -83,3 +93,7 @@ This study was pre-registered as part of a Stage 1 Programmatic Registered Repor
 | Matti Vuorre | [0000-0001-5052-066X](https://orcid.org/0000-0001-5052-066X) | Tilburg University |
 | Kristoffer Magnusson | [0000-0003-0713-0556](https://orcid.org/0000-0003-0713-0556) | Karolinska Institute |
 | Andrew K. Przybylski | [0000-0001-5547-2185](https://orcid.org/0000-0001-5547-2185) | Oxford Internet Institute |
+
+## License
+
+Code is released under the [MIT License](LICENSE). The Open Play data are distributed under their own terms; see the [Open Play repository](https://github.com/digital-wellbeing/open-play) and Zenodo record.
