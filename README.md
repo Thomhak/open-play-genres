@@ -2,7 +2,7 @@
 
 **Thomas Hakman, Nick Ballou, Tamás Andrei Földes, Matti Vuorre, Kristoffer Magnusson, Andrew K. Przybylski**
 
-Oxford Internet Institute · Tilburg University · Karolinska Institute
+Oxford Internet Institute · Tilburg University · Karolinska Institute · Imperial College London
 
 ---
 
@@ -88,7 +88,7 @@ The main analysis assigns **all IGDB genres** to each game rather than only the 
 | Name | ORCID | Affiliation |
 |------|-------|-------------|
 | Thomas Hakman | [0009-0009-8292-2482](https://orcid.org/0009-0009-8292-2482) | Oxford Internet Institute |
-| Nick Ballou | [0000-0003-4126-0696](https://orcid.org/0000-0003-4126-0696) | Oxford Internet Institute |
+| Nick Ballou | [0000-0003-4126-0696](https://orcid.org/0000-0003-4126-0696) | Imperial College London |
 | Tamás Andrei Földes | [0000-0002-0623-9149](https://orcid.org/0000-0002-0623-9149) | Oxford Internet Institute |
 | Matti Vuorre | [0000-0001-5052-066X](https://orcid.org/0000-0001-5052-066X) | Tilburg University |
 | Kristoffer Magnusson | [0000-0003-0713-0556](https://orcid.org/0000-0003-0713-0556) | Karolinska Institute |
