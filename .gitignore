@@ -28,13 +28,15 @@ data/*
 # Bayesian model fits (brms; large, local only)
 models/
 
-# Rendered outputs (regenerable via `quarto render`)
-*.html
-*.pdf
-*.docx
-*.doc
-manuscript_files/
-manuscript_prereg_files/
+# Rendered outputs at repo root (regenerable via `quarto render`)
+# Published site lives in docs/ and is committed for GitHub Pages.
+/*.html
+/*.pdf
+/*.docx
+/*.doc
+/manuscript_files/
+/manuscript_prereg_files/
+Rplots.pdf
 
 # Full Open Play repo clone (data downloaded via Makefile instead)
 open-play-v1.1.0/

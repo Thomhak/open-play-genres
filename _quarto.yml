@@ -1,4 +1,7 @@
 project:
   title: "Playtime–wellbeing associations are practically null across video game genres"
+  output-dir: docs
   render:
     - manuscript.qmd
+  post-render:
+    - ensure-nojekyll.sh

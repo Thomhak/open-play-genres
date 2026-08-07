@@ -116,6 +116,7 @@ format:
           #show table: it => block(above: 1.4em, below: 1.4em, it)
   docx: default
   html:
+    output-file: index.html
     toc: true
     toc-location: left
     theme: cosmo
@@ -123,6 +124,11 @@ format:
     code-fold: true
     html-math-method: katex
     embed-resources: true
+    format-links:
+      - format: preprint-typst
+        text: PDF
+      - format: docx
+        text: DOCX
 ---
 
 # Introduction

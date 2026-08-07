@@ -25,11 +25,17 @@ Rscript R/01_preprocess.R
 # 4. Run the multiple imputation (cached; ~20 min)
 Rscript R/02_impute_wemwbs.R
 
-# 5. Render manuscript
+# 5. Render manuscript (HTML + PDF + DOCX → docs/ for GitHub Pages)
 quarto render manuscript.qmd
 ```
 
 **Note on first run:** The manuscript fits four Bayesian models via `brms`. On a first render (no cached model files), this takes roughly **24+ hours** depending on hardware. Fitted models are cached as `.rds` files in `models/`, and the multiple imputation is cached in `data/processed/imputation/` (neither tracked by git; the manuscript regenerates the imputation automatically if the cache is missing). Subsequent renders load the cached fits and complete in minutes.
+
+## Preprint site
+
+The rendered HTML (with links to PDF and DOCX) is published via GitHub Pages from the `docs/` folder:
+
+<https://thomhak.github.io/open-play-genres/>
 
 ## Repository structure
 
