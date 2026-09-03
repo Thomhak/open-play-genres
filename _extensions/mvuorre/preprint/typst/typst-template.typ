@@ -410,8 +410,10 @@
     }
   })
 
-  // Word count with wordometer package
-  show: word-count.with(exclude: (<refs>))
+  // Word count with wordometer package. Main text only: excludes the
+  // reference list (<refs>), figures and tables with their captions, and
+  // any content labelled <no-wc> (the manuscript wraps its appendices in it).
+  show: word-count.with(exclude: (<refs>, <no-wc>, figure, table))
 
   /* Document content */
   doc

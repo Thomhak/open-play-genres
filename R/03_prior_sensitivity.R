@@ -2,15 +2,15 @@
 # Prior-sensitivity refits for the H2 heterogeneity hyperpriors (review M13)
 # =============================================================================
 #
-# Refits M2 (hierarchical prior; tau ~ Half-Normal(0, s)) and M3
+# Refits M3 (hierarchical prior; tau ~ Half-Normal(0, s)) and M4
 # (multi-membership; sigma_s ~ Half-Normal(0, s)) with halved and doubled
-# hyperprior scales around the manuscript's choices (M2: 0.1; M3: 0.3).
+# hyperprior scales around the manuscript's choices (M3: 0.1; M4: 0.3).
 # The base-scale fits are the manuscript's cached models and are not refit.
 #
 # Data construction replicates manuscript.qmd chunks `model-data` and
 # `mm-data-setup` exactly, so results are directly comparable.
 #
-# NOT RUN by the manuscript. Runtime: each M2 refit ~1-3 h, each M3 refit
+# NOT RUN by the manuscript. Runtime: each M3 refit ~1-3 h, each M4 refit
 # ~3-8 h on 4 chains (hardware dependent) -> plan for an overnight run:
 #   Rscript R/03_prior_sensitivity.R
 # Fits are cached via brms `file =` under models/, so the script is safe to
@@ -114,7 +114,7 @@ mm_groups <- get_prior(h2_mm_formula, data = mm_data |> filter(!is.na(wemwbs))) 
 stopifnot(length(mm_groups) >= 1)
 mm_group_name <- mm_groups[1]
 
-# --- M2 refits: tau ~ Half-Normal(0, s) --------------------------------------
+# --- M3 refits: tau ~ Half-Normal(0, s) --------------------------------------
 
 sv_hier_scale <- function(s) {
   stanvar(scode = "real<lower=0> tau_genre_within;\nreal<lower=0> tau_genre_between;",
@@ -136,11 +136,11 @@ hier_priors <- c(
   do.call(c, lapply(gh_between, \(g) set_prior("normal(0, tau_genre_between)", class = "b", coef = g)))
 )
 
-m2_fits <- list()
+m3_fits <- list()
 for (s in M2_SCALES) {
   tag <- gsub("\\.", "p", sprintf("%.2f", s))
-  message(sprintf("=== M2 refit: tau ~ Half-Normal(0, %.2f) ===", s))
-  m2_fits[[as.character(s)]] <- brm(
+  message(sprintf("=== M3 refit: tau ~ Half-Normal(0, %.2f) ===", s))
+  m3_fits[[as.character(s)]] <- brm(
     formula  = h2_hier_formula,
     data     = analysis_data |> filter(!is.na(wemwbs)),
     prior    = hier_priors,
@@ -148,17 +148,17 @@ for (s in M2_SCALES) {
     family   = gaussian(),
     chains   = 4, iter = 8000, warmup = 4000, seed = 2025,
     control  = list(adapt_delta = 0.999, max_treedepth = 15),
-    file     = here(sprintf("models/prior_sens_m2_tau%s", tag))
+    file     = here(sprintf("models/prior_sens_m3_tau%s", tag))
   )
 }
 
-# --- M3 refits: sigma_s ~ Half-Normal(0, s) ----------------------------------
+# --- M4 refits: sigma_s ~ Half-Normal(0, s) ----------------------------------
 
-m3_fits <- list()
+m4_fits <- list()
 for (s in M3_SCALES) {
   tag <- gsub("\\.", "p", sprintf("%.2f", s))
-  message(sprintf("=== M3 refit: sigma_s ~ Half-Normal(0, %.2f) ===", s))
-  m3_fits[[as.character(s)]] <- brm(
+  message(sprintf("=== M4 refit: sigma_s ~ Half-Normal(0, %.2f) ===", s))
+  m4_fits[[as.character(s)]] <- brm(
     formula = h2_mm_formula,
     data    = mm_data |> filter(!is.na(wemwbs)),
     prior   = c(
@@ -169,7 +169,7 @@ for (s in M3_SCALES) {
     family  = gaussian(),
     chains  = 4, iter = 8000, warmup = 4000, seed = 8675309,
     control = list(adapt_delta = 0.999, max_treedepth = 15),
-    file    = here(sprintf("models/prior_sens_m3_sigma%s", tag))
+    file    = here(sprintf("models/prior_sens_m4_sigma%s", tag))
   )
 }
 
@@ -186,18 +186,18 @@ summarise_tau <- function(fit, par) {
 # concatenated with c() into ONE list before bind_rows(), otherwise dplyr
 # mis-handles the multiple named-list arguments and drops the columns.
 summary_tbl <- bind_rows(c(
-  imap(m2_fits, \(f, s) summarise_tau(f, "tau_genre_within") |>
-         mutate(model = "M2", parameter = "tau_within", scale = as.numeric(s))),
-  imap(m2_fits, \(f, s) summarise_tau(f, "tau_genre_between") |>
-         mutate(model = "M2", parameter = "tau_between", scale = as.numeric(s))),
-  imap(m3_fits, \(f, s) {
+  imap(m3_fits, \(f, s) summarise_tau(f, "tau_genre_within") |>
+         mutate(model = "M3", parameter = "tau_within", scale = as.numeric(s))),
+  imap(m3_fits, \(f, s) summarise_tau(f, "tau_genre_between") |>
+         mutate(model = "M3", parameter = "tau_between", scale = as.numeric(s))),
+  imap(m4_fits, \(f, s) {
     dn <- names(as_draws_df(f))
     sw <- grep(paste0("sd_", mm_group_name, ".*total_within"),  dn, value = TRUE)[1]
     sb <- grep(paste0("sd_", mm_group_name, ".*total_between"), dn, value = TRUE)[1]
     bind_rows(
       summarise_tau(f, sw) |> mutate(parameter = "sigma_s_within"),
       summarise_tau(f, sb) |> mutate(parameter = "sigma_s_between")
-    ) |> mutate(model = "M3", scale = as.numeric(s))
+    ) |> mutate(model = "M4", scale = as.numeric(s))
   })
 )) |>
   relocate(model, parameter, scale)

@@ -5,11 +5,11 @@
 # within-person SD ratio computed here sets the (weakly informative) prior
 # scales; the equivalence benchmarks reported in the manuscript are derived
 # separately per instrument (see the plan). Fits cache under models/daily/. Model constructions mirror the
-# registered biweekly models in manuscript.qmd (M0 h1-fit, M2 h2-hier-fit,
-# M3 mm-formula-setup) with priors rescaled by r = SESOI_LS / 0.06.
+# registered biweekly models in manuscript.qmd (M1 h1-fit, M3 h2-hier-fit,
+# M4 mm-formula-setup) with priors rescaled by r = SESOI_LS / 0.06.
 #
-# Usage: Rscript R/fit_daily_models.R mm     (M3 multi-membership, longest)
-#        Rscript R/fit_daily_models.R rest   (M0 + M0-full + M2 + lagged)
+# Usage: Rscript R/fit_daily_models.R mm     (M4 multi-membership, longest)
+#        Rscript R/fit_daily_models.R rest   (M1 + M1-full + M3 + lagged)
 # The two invocations are independent and can run concurrently.
 
 suppressPackageStartupMessages({
@@ -20,8 +20,8 @@ suppressPackageStartupMessages({
 })
 
 which_block <- commandArgs(trailingOnly = TRUE)[1]
-if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge", "m1", "dyn")) {
-  stop("Argument must be 'mm', 'rest', 'bridge', 'm1', or 'dyn'")
+if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge", "m2", "dyn")) {
+  stop("Argument must be 'mm', 'rest', 'bridge', 'm2', or 'dyn'")
 }
 dir.create(here("models/daily"), showWarnings = FALSE, recursive = TRUE)
 
@@ -57,7 +57,7 @@ decompose <- function(df) {
 # Analysed sample (see analysis plan): telemetry-covered responses from
 # participants with reliable timezone inference, excluding structurally
 # degenerate windows shorter than one hour. All responses are retained
-# for the M0 sensitivity refit, which spans both relaxations.
+# for the M1 sensitivity refit, which spans both relaxations.
 frame      <- decompose(raw_frame |>
                           filter(covered, !tz_unreliable, window_hours >= 1,
                                  !is.na(habitual_daily_hours)))
@@ -128,7 +128,7 @@ message(sprintf("Rows: life_sat %d, pids %d",
 
 if (which_block == "dyn") {
 
-  # Two M0 sensitivities answering the intensive-longitudinal critiques of
+  # Two M1 sensitivities answering the intensive-longitudinal critiques of
   # the primary specification (see analysis plan, amendment 7):
   # (a) AR(1) residuals within person by day index, plus a within-person
   #     linear day trend: guards the within-person interval against serial
@@ -145,7 +145,7 @@ if (which_block == "dyn") {
     ) |>
     ungroup()
 
-  message("Fitting M0-daily AR(1) + day-trend sensitivity...")
+  message("Fitting M1-D AR(1) + day-trend sensitivity...")
   invisible(brm(
     bf(life_sat ~ total_within + total_between + day_w +
          ar(time = day, gr = pid, p = 1) +
@@ -156,11 +156,11 @@ if (which_block == "dyn") {
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
-    file = here("models/daily/m0_daily_ls_ar"), file_refit = "never"
+    file = here("models/daily/m1_daily_ls_ar"), file_refit = "never"
   ))
   message("AR sensitivity done.")
 
-  message("Fitting M0-daily window-length sensitivity...")
+  message("Fitting M1-D window-length sensitivity...")
   invisible(brm(
     bf(life_sat ~ total_within + total_between + wh_w + wh_b +
          (1 + total_within | pid)),
@@ -170,36 +170,36 @@ if (which_block == "dyn") {
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
-    file = here("models/daily/m0_daily_ls_wh"), file_refit = "never"
+    file = here("models/daily/m1_daily_ls_wh"), file_refit = "never"
   ))
   message("Window-length sensitivity done.")
 
-} else if (which_block == "m1") {
+} else if (which_block == "m2") {
 
-  # M1-daily: unpooled fixed-effects genre specification (mirrors the
+  # M2-D: independent-coefficient genre specification (mirrors the
   # registered h2_genre_model), primary outcome only. Same prior family as
   # the other daily fits. Its raw per-draw coefficient SDs carry sampling
   # noise, as in the registered analysis; reported with that caveat.
-  m1_rhs <- paste(c(gh_w, gh_b), collapse = " + ")
-  message("Fitting M1-daily (life_sat)...")
+  m2_rhs <- paste(c(gh_w, gh_b), collapse = " + ")
+  message("Fitting M2-D (life_sat)...")
   invisible(brm(
-    bf(as.formula(paste("life_sat ~", m1_rhs, "+ (1 | pid)"))),
+    bf(as.formula(paste("life_sat ~", m2_rhs, "+ (1 | pid)"))),
     data   = model_data_ls,
     prior  = set_prior(prior_b, class = "b") +
              set_prior(prior_intercept, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
-    file = here("models/daily/m1_daily_ls"), file_refit = "never"
+    file = here("models/daily/m2_daily_ls"), file_refit = "never"
   ))
-  message("M1-daily done.")
+  message("M2-D done.")
 
 } else if (which_block == "bridge") {
 
-  # Biweekly life-satisfaction comparison: M0 structure on the biweekly
+  # Biweekly life-satisfaction comparison: M1 structure on the biweekly
   # Cantril ladder (0-10, past two weeks). NOTE this is a different item from
   # the daily 0-100 slider, so it varies construct at fixed grain rather than
-  # holding the instrument constant. Mirrors the registered M0 frame (full
+  # holding the instrument constant. Mirrors the registered M1 frame (full
   # survey, zero-filled exposure, no coverage restriction).
   bls <- read_csv(here("data/clean/survey_biweekly.csv.gz"),
                   show_col_types = FALSE) |>
@@ -234,7 +234,7 @@ if (which_block == "dyn") {
   s_all$bls_scale_max <- scale_max
   saveRDS(s_all, here("models/daily/sesoi.rds"))
 
-  message("Fitting M0-biweekly life_sat bridge...")
+  message("Fitting M1-biweekly life_sat bridge...")
   invisible(brm(
     bf(life_sat ~ total_within + total_between + (1 + total_within | pid)),
     data   = bframe,
@@ -243,14 +243,14 @@ if (which_block == "dyn") {
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
-    file = here("models/daily/m0_biweekly_ls_bridge"), file_refit = "never"
+    file = here("models/daily/m1_biweekly_ls_bridge"), file_refit = "never"
   ))
   message("Bridge fit done.")
 
 } else if (which_block == "rest") {
 
-  # M0-daily, primary outcome (mirrors h1-fit)
-  message("Fitting M0-daily (life_sat)...")
+  # M1-D, primary outcome (mirrors h1-fit)
+  message("Fitting M1-D (life_sat)...")
   invisible(brm(
     bf(life_sat ~ total_within + total_between + (1 + total_within | pid)),
     data   = model_data_ls,
@@ -259,12 +259,12 @@ if (which_block == "dyn") {
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
-    file = here("models/daily/m0_daily_ls"), file_refit = "never"
+    file = here("models/daily/m1_daily_ls"), file_refit = "never"
   ))
-  message("M0-daily (life_sat) done.")
+  message("M1-D (life_sat) done.")
 
-  # M0-daily sensitivity: full frame (all responses, structural zeros as-is)
-  message("Fitting M0-daily full-frame sensitivity (life_sat)...")
+  # M1-D sensitivity: full frame (all responses, structural zeros as-is)
+  message("Fitting M1-D full-frame sensitivity (life_sat)...")
   invisible(brm(
     bf(life_sat ~ total_within + total_between + (1 + total_within | pid)),
     data   = frame_full |> filter(!is.na(life_sat)),
@@ -273,13 +273,13 @@ if (which_block == "dyn") {
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
-    file = here("models/daily/m0_daily_ls_full"), file_refit = "never"
+    file = here("models/daily/m1_daily_ls_full"), file_refit = "never"
   ))
-  message("M0-daily full-frame sensitivity done.")
+  message("M1-D full-frame sensitivity done.")
 
   # Sensitivity: exclude Xbox date-floored sessions from same-day exposure
   # (analysis plan 8b); habitual between term unchanged (dates are valid).
-  message("Fitting M0-daily exclude-floored sensitivity...")
+  message("Fitting M1-D exclude-floored sensitivity...")
   xfl_data <- frame |>
     group_by(pid) |>
     mutate(xfl_within = total_hours_today_xfl -
@@ -294,11 +294,11 @@ if (which_block == "dyn") {
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
-    file = here("models/daily/m0_daily_ls_xfl"), file_refit = "never"
+    file = here("models/daily/m1_daily_ls_xfl"), file_refit = "never"
   ))
   message("Exclude-floored sensitivity done.")
 
-  # M2-daily: hierarchical prior over genre coefficients (mirrors h2-hier-fit)
+  # M3-D: hierarchical prior over genre coefficients (mirrors h2-hier-fit)
   sv_hier <- stanvar(
     scode = "real<lower=0> tau_genre_within;\nreal<lower=0> tau_genre_between;",
     block = "parameters"
@@ -327,7 +327,7 @@ if (which_block == "dyn") {
   )
   hier_rhs <- paste(c(gh_w, gh_b), collapse = " + ")
 
-  message("Fitting M2-daily (life_sat)...")
+  message("Fitting M3-D (life_sat)...")
   invisible(brm(
     bf(as.formula(paste("life_sat ~", hier_rhs, "+ (1 | pid)"))),
     data     = model_data_ls,
@@ -337,15 +337,15 @@ if (which_block == "dyn") {
     chains   = 4, iter = 8000, warmup = 4000, cores = 4, seed = 2025,
     # One documented escalation (analysis plan 5): 16 divergences at 0.999
     control  = list(adapt_delta = 0.9995, max_treedepth = 15),
-    file = here("models/daily/m2_daily_ls_v2"), file_refit = "never"
+    file = here("models/daily/m3_daily_ls_v2"), file_refit = "never"
   ))
-  message("M2-daily (life_sat) done.")
+  message("M3-D (life_sat) done.")
 
   message("All 'rest' fits complete.")
 
 } else {
 
-  # M3-daily: multi-membership, primary outcome only (mirrors mm-formula-setup)
+  # M4-D: multi-membership, primary outcome only (mirrors mm-formula-setup)
   K <- length(gh_cols)
   mm_data <- model_data_ls |>
     mutate(gh_row_total = rowSums(across(all_of(gh_cols))))
@@ -388,7 +388,7 @@ if (which_block == "dyn") {
   # Registered iterations (8000/4000): at 4000 the bulk-ESS of
   # b_total_between fell below the ~400 convention (371); adapt_delta 0.995
   # retained (zero divergences previously; ESS, not geometry, was the issue).
-  message("Fitting M3-daily mm (life_sat)...")
+  message("Fitting M4-D mm (life_sat)...")
   invisible(brm(
     formula = mm_formula,
     data    = mm_data,
@@ -396,7 +396,7 @@ if (which_block == "dyn") {
     family  = gaussian(),
     chains  = 4, iter = 8000, warmup = 4000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.995, max_treedepth = 15),
-    file = here("models/daily/m3_daily_mm_ls"), file_refit = "never"
+    file = here("models/daily/m4_daily_mm_ls"), file_refit = "never"
   ))
-  message("M3-daily mm done.")
+  message("M4-D mm done.")
 }

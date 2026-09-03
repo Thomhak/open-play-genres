@@ -78,5 +78,7 @@ format_genre_display <- function(x) {
     str_remove("_between$") |>
     str_replace_all("_", " ") |>
     str_to_title() |>
-    str_replace("^Role Playing Rpg$", "Role Playing Game (RPG)")
+    str_replace("^Role Playing Rpg$", "Role-playing") |>
+    str_replace("^Hack And Slash Beat Em Up$", "Hack & Slash / Beat 'em Up") |>
+    str_replace("^Point And Click$", "Point-and-Click")
 }

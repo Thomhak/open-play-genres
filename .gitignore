@@ -85,3 +85,21 @@ CLAUDE.md
 *.woff
 *.tex
 /.luarc.json
+
+# Co-author review copies with tracked changes/comments (docs/ is published to GitHub Pages)
+docs/manuscript_v*.docx
+
+# Model-written literature digests derived from Zotero PDFs (local only)
+literature/
+
+# Editor and local tooling config
+.vscode/
+zotero-digest.json
+
+# Quarto figure directory left beside the self-contained outputs in docs/
+docs/manuscript_files/
+
+# Generated comparison version (built from manuscript.qmd by scripts/build_conventional.py)
+manuscript_conventional.qmd
+manuscript_conventional_files/
+docs/manuscript_conventional.docx

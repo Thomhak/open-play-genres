@@ -110,7 +110,7 @@ run_mice_chunks <- function(data, meth, pred, m_total, seed, label = "main") {
   Reduce(mice::ibind, imp_list)
 }
 
-#' Fit the H1 REWB model (console/PC total, matching M0's scope) in each
+#' Fit the H1 REWB model (console/PC total, matching M1's scope) in each
 #' completed dataset; used for the von Hippel FMI check.
 fit_h1_per_imputation <- function(imp_obj, wemwbs_grand_mean) {
   lapply(seq_len(imp_obj$m), function(i) {

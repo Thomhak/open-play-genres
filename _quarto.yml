@@ -4,4 +4,4 @@ project:
   render:
     - manuscript.qmd
   post-render:
-    - ensure-nojekyll.sh
+    - ./ensure-nojekyll.sh

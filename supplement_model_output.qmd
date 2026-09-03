@@ -1,6 +1,6 @@
 ---
 title: "Supplementary Materials: Full Model Output"
-subtitle: "Wellbeing effects (do not) hold constant across video game genres"
+subtitle: "Playtime–wellbeing associations are practically null across video game genres"
 date: last-modified
 execute:
   warning: false
@@ -14,9 +14,9 @@ format:
 ---
 
 This supplement reports the full posterior summaries for the four Bayesian
-multilevel models in the main manuscript: M0 (total playtime REWB), M1
-(pre-registered fixed-effects genre model), M2 (hierarchical prior genre
-model), and M3 (multi-membership genre model). Models are loaded from the
+multilevel models in the main manuscript: M1 (total playtime REWB), M2
+(pre-registered independent-coefficient genre model), M3 (hierarchical prior genre
+model), and M4 (multi-membership genre model). Models are loaded from the
 cached fits in `models/`; to regenerate them, render `manuscript.qmd`.
 
 ```{r}
@@ -39,7 +39,7 @@ h2_mm_model   <- readRDS(here("models/h2_mm_model_full.rds"))
 # Convert summary(brmsfit) into a single tidy table with grouped sections
 # (population-level effects, group-level effects per grouping factor, and
 # family-specific parameters), rendered with tinytable. Custom stanvars
-# parameters (e.g. M2's tau hyperparameters) are absent from summary() and
+# parameters (e.g. M3's tau hyperparameters) are absent from summary() and
 # can be appended via extra_pars, summarised directly from the draws.
 brms_summary_tt <- function(model, extra_pars = NULL) {
   s <- summary(model)
@@ -104,39 +104,39 @@ brms_summary_tt <- function(model, extra_pars = NULL) {
 }
 ```
 
-# M0: Total Playtime (H1)
+# M1: Total Playtime (H1)
 
 ```{r}
-#| label: tbl-supp-m0
-#| tbl-cap: "Full posterior summary for M0 (total playtime REWB model). Estimates are posterior means with 95% credible intervals; R-hat and effective sample sizes (ESS) are convergence diagnostics."
+#| label: tbl-supp-m1
+#| tbl-cap: "Full posterior summary for M1 (total playtime REWB model). Estimates are posterior means with 95% credible intervals; R-hat and effective sample sizes (ESS) are convergence diagnostics."
 
 brms_summary_tt(h1_model)
 ```
 
-# M1: Pre-Registered Fixed-Effects (H2)
+# M2: Pre-Registered Independent Genre Coefficients (H2)
 
 ```{r}
-#| label: tbl-supp-m1
-#| tbl-cap: "Full posterior summary for M1 (pre-registered fixed-effects genre model). Genre parameters are labelled `gh_{genre}_within` and `gh_{genre}_between` for the within- and between-person exposure terms."
+#| label: tbl-supp-m2
+#| tbl-cap: "Full posterior summary for M2 (pre-registered independent-coefficient genre model). Genre parameters are labelled `gh_{genre}_within` and `gh_{genre}_between` for the within- and between-person exposure terms."
 
 brms_summary_tt(h2_model)
 ```
 
-# M2: Hierarchical Prior (H2)
+# M3: Hierarchical Prior (H2)
 
 ```{r}
-#| label: tbl-supp-m2
-#| tbl-cap: "Full posterior summary for M2 (hierarchical prior genre model). `tau_genre_within` and `tau_genre_between` are the learned hyperparameters governing partial pooling of the genre coefficients."
+#| label: tbl-supp-m3
+#| tbl-cap: "Full posterior summary for M3 (hierarchical prior genre model). `tau_genre_within` and `tau_genre_between` are the learned hyperparameters governing partial pooling of the genre coefficients."
 
 brms_summary_tt(h2_hier_model,
                 extra_pars = c("tau_genre_within", "tau_genre_between"))
 ```
 
-# M3: Multi-Membership (H2)
+# M4: Multi-Membership (H2)
 
 ```{r}
-#| label: tbl-supp-m3
-#| tbl-cap: "Full posterior summary for M3 (multi-membership genre model). Group-level standard deviations for the `mm()` term are the genre heterogeneity parameters (σ~s~ within and between)."
+#| label: tbl-supp-m4
+#| tbl-cap: "Full posterior summary for M4 (multi-membership genre model). Group-level standard deviations for the `mm()` term are the genre heterogeneity parameters (σ~s~ within and between)."
 
 brms_summary_tt(h2_mm_model)
 ```
