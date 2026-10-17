@@ -24,6 +24,14 @@ renv/staging/
 
 # Data (participant telemetry — download via `make data`)
 data/*
+# Small derived reference files (pseudonymous pids only; read by manuscript.qmd)
+!data/reference/
+# M4 recovery-simulation summaries read by manuscript chunk sim-recovery-summary (not the fits)
+!data/processed/
+data/processed/*
+!data/processed/sim_recovery/
+data/processed/sim_recovery/reps/
+data/processed/sim_recovery/run_info.rds
 
 # Bayesian model fits (brms; large, local only)
 models/
@@ -35,6 +43,7 @@ models/
 /*.docx
 /*.doc
 /manuscript_files/
+/manuscript_v43_files/
 /manuscript_prereg_files/
 Rplots.pdf
 
@@ -55,8 +64,12 @@ R/standalone/
 manuscript_prereg.qmd
 R/01_preprocess_prereg.R
 
-# Dev tooling (local only)
-scripts/
+# Dev tooling (local only), except the scripts the pipeline and CLAUDE.md rely on
+scripts/*
+!scripts/refit_v126.sh
+!scripts/zotero_digest.py
+!scripts/docx_changes.py
+!scripts/prep_daily_positive_control.R
 
 # Quarto intermediate
 manuscript.rmarkdown
@@ -73,9 +86,8 @@ manuscript copy.qmd
 notes/
 analysis_plan_daily.md
 
-# Internal dev/agent notes (local only)
+# Internal dev/agent notes (local only); CLAUDE.md is tracked (project instructions)
 .internal/
-CLAUDE.md
 
 # Media / fonts / JS / CSS
 *.mp4

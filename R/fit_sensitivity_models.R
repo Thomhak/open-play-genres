@@ -9,6 +9,11 @@
 #
 # Runtime: ~30-90 minutes per model on 4 parallel chains.
 # Usage:   Rscript R/fit_sensitivity_models.R
+#
+# DATA VERSION: these fits must be regenerated for Open Play v1.2.6 and the
+# qualified-only analytic sample (analytic_pids() in R/01_preprocess.R). The
+# brms `file =` targets are unchanged; the v1.2.1 fits are archived to
+# models/archive_v121/ by scripts/refit_v126.sh before refitting.
 # =============================================================================
 
 library(here)
@@ -28,13 +33,9 @@ dir.create(here("models"), showWarnings = FALSE, recursive = TRUE)
 
 intake <- read_csv(here("data/clean/survey_intake.csv.gz"), show_col_types = FALSE)
 
-# The analytic sample is defined by the models: all participants with at
-# least one valid SWEMWBS response in the biweekly survey.
-analysis_pids <- read_csv(here("data/clean/survey_biweekly.csv.gz"), show_col_types = FALSE) |>
-  mutate(wemwbs = rowMeans(across(starts_with("wemwbs_")), na.rm = FALSE)) |>
-  filter(!is.na(wemwbs)) |>
-  distinct(pid) |>
-  pull(pid)
+# The analytic sample: participants qualified at intake with at least one
+# valid SWEMWBS response in biweekly waves 1-6 (analytic_pids(), 01_preprocess.R).
+analysis_pids <- analytic_pids()
 
 demographics <- intake |>
   filter(qualified) |>
@@ -70,7 +71,7 @@ analytic_sample <- demographics |>
 
 # --- Replicates manuscript.qmd chunk `model-data` ---------------------------
 
-survey <- load_survey_data()
+survey <- load_survey_data(analysis_pids)
 
 genre_wave_long <- read_csv(here("data/processed/genre_wave_long.csv"), show_col_types = FALSE)
 total_playtime  <- read_csv(here("data/processed/total_playtime.csv"),  show_col_types = FALSE)
@@ -138,8 +139,7 @@ h1_demo <- brm(
   bf(wemwbs ~ total_within + total_between + age + gender + ethnicity +
        (1 + total_within | pid)),
   data    = demo_data,
-  prior   = prior(student_t(3, 0, 0.5), class = "b") +
-            prior(student_t(3, 3, 2),   class = "Intercept"),
+  # brms default priors, as in M1 and M2 (since 2026-10-13).
   family  = gaussian(),
   chains  = 4, iter = 4000, warmup = 2000, seed = 8675309,
   control = list(adapt_delta = 0.95),
@@ -160,8 +160,7 @@ h2_demo_formula <- bf(paste(
 h2_demo <- brm(
   formula = h2_demo_formula,
   data    = demo_data,
-  prior   = prior(student_t(3, 0, 0.5), class = "b") +
-            prior(student_t(3, 3, 2),   class = "Intercept"),
+  # brms default priors, as in M1 and M2 (since 2026-10-13).
   family  = gaussian(),
   chains  = 4, iter = 4000, warmup = 2000, seed = 8675309,
   control = list(adapt_delta = 0.95),

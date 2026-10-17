@@ -47,6 +47,11 @@
 #
 # Usage: Rscript R/02_impute_wemwbs.R
 #        or source() and call impute_wemwbs() (used by manuscript.qmd)
+#
+# Sample (Open Play v1.2.6): the grid is restricted to analytic_pids() from
+# R/01_preprocess.R (intake qualified == TRUE AND >= 1 valid SWEMWBS in waves
+# 1-6). The v1.2.1 outputs were archived to data/processed_v121/imputation/;
+# this script must be re-run for v1.2.6 (scripts/refit_v126.sh).
 # =============================================================================
 
 library(here)
@@ -143,12 +148,16 @@ impute_wemwbs <- function() {
   # ---------------------------------------------------------------------------
   message("=== Building full participant x wave grid ===")
 
-  survey <- load_survey_data() |>
+  # Analytic sample: qualified at intake AND >= 1 valid SWEMWBS (01_preprocess.R).
+  pids_analytic <- analytic_pids()
+  survey <- load_survey_data(pids_analytic) |>
     # The clean biweekly file contains a handful of rows with wave == 7
     # (outside the six-wave design); exclude them from the imputation frame.
     filter(wave >= 1, wave <= N_WAVES)
 
   analysis_pids <- survey |> filter(!is.na(wemwbs)) |> distinct(pid) |> pull(pid)
+  stopifnot("imputation grid pids differ from analytic_pids()" =
+              setequal(analysis_pids, pids_analytic))
   n_no_outcome  <- n_distinct(survey$pid) - length(analysis_pids)
   message(sprintf(
     "  %d participants with >=1 valid SWEMWBS (%d surveyed participants with none excluded)",
@@ -166,7 +175,7 @@ impute_wemwbs <- function() {
   # so imputing the composite directly loses nothing.
   biw_items <- read_csv(here("data/clean/survey_biweekly.csv.gz"),
                         show_col_types = FALSE) |>
-    filter(wave >= 1, wave <= N_WAVES) |>
+    filter(wave >= 1, wave <= N_WAVES, pid %in% pids_analytic) |>
     select(starts_with("wemwbs_"))
   n_partial <- sum({
     k <- rowSums(is.na(biw_items)); k > 0 & k < 7

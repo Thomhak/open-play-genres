@@ -1,6 +1,6 @@
 ---
 title: "Supplementary Materials: Full Model Output"
-subtitle: "Playtime–wellbeing associations are practically null across video game genres"
+subtitle: "Playtime–wellbeing associations are practically null and vary little across video game genres"
 date: last-modified
 execute:
   warning: false
@@ -15,8 +15,11 @@ format:
 
 This supplement reports the full posterior summaries for the four Bayesian
 multilevel models in the main manuscript: M1 (total playtime REWB), M2
-(pre-registered independent-coefficient genre model), M3 (hierarchical prior genre
-model), and M4 (multi-membership genre model). Models are loaded from the
+(preregistered independent-coefficient genre model), M3 (hierarchical prior genre
+model), and M4 (multi-membership genre model). All four use the `brms` default priors. M3's hierarchical prior on the genre
+coefficients is estimated in non-centred form, as two multi-membership genre terms
+weighted by the genre exposures, so its spreads τ are `brms` group-level standard
+deviations with the default half-Student-t(3, 0, 2.5) prior (manuscript, Appendix F). Models are loaded from the
 cached fits in `models/`; to regenerate them, render `manuscript.qmd`.
 
 ```{r}
@@ -33,16 +36,22 @@ library(tinytable)
 
 h1_model      <- readRDS(here("models/h1_rewb_model.rds"))
 h2_model      <- readRDS(here("models/h2_genre_model.rds"))
-h2_hier_model <- readRDS(here("models/h2_hier_model_v2.rds"))
+h2_hier_model <- readRDS(here("models/h2_hier_model_v4.rds"))
 h2_mm_model   <- readRDS(here("models/h2_mm_model_full.rds"))
 
 # Convert summary(brmsfit) into a single tidy table with grouped sections
 # (population-level effects, group-level effects per grouping factor, and
-# family-specific parameters), rendered with tinytable. Custom stanvars
-# parameters (e.g. M3's tau hyperparameters) are absent from summary() and
-# can be appended via extra_pars, summarised directly from the draws.
-brms_summary_tt <- function(model, extra_pars = NULL) {
+# family-specific parameters), rendered with tinytable. Derived quantities
+# (M3's per-genre coefficients, computed draw-wise) are absent from summary()
+# and can be appended via extra_draws, a draws_df summarised directly;
+# group_labels renames grouping factors (M3's long mm group names).
+brms_summary_tt <- function(model, extra_draws = NULL, extra_section = NULL,
+                            group_labels = NULL) {
   s <- summary(model)
+  if (!is.null(group_labels)) {
+    stopifnot(all(names(group_labels) %in% names(s$random)))
+    names(s$random)[match(names(group_labels), names(s$random))] <- group_labels
+  }
 
   tidy_section <- function(df, section) {
     df |>
@@ -61,16 +70,16 @@ brms_summary_tt <- function(model, extra_pars = NULL) {
     tidy_section(s$spec_pars, "Family-specific parameters")
   ))
 
-  if (!is.null(extra_pars)) {
+  if (!is.null(extra_draws)) {
     extra <- posterior::summarise_draws(
-      posterior::subset_draws(posterior::as_draws_array(model), variable = extra_pars),
+      extra_draws,
       Estimate = mean, Est.Error = sd,
       ~posterior::quantile2(.x, probs = c(0.025, 0.975)),
       Rhat = posterior::rhat,
       Bulk_ESS = posterior::ess_bulk, Tail_ESS = posterior::ess_tail
     ) |>
       rename(Parameter = variable, `l-95% CI` = q2.5, `u-95% CI` = q97.5) |>
-      mutate(section = "Model-specific hyperparameters")
+      mutate(section = extra_section)
     sections <- c(sections, list(extra))
   }
 
@@ -80,7 +89,7 @@ brms_summary_tt <- function(model, extra_pars = NULL) {
       Parameter,
       Estimate     = sprintf("%.3f", Estimate),
       `Est. error` = sprintf("%.3f", Est.Error),
-      `95% CrI`    = sprintf("[%.3f, %.3f]", `l-95% CI`, `u-95% CI`),
+      `95% CI`     = sprintf("[%.3f, %.3f]", `l-95% CI`, `u-95% CI`),
       `R-hat`      = sprintf("%.3f", Rhat),
       `Bulk ESS`   = sprintf("%d", round(Bulk_ESS)),
       `Tail ESS`   = sprintf("%d", round(Tail_ESS))
@@ -117,7 +126,7 @@ brms_summary_tt(h1_model)
 
 ```{r}
 #| label: tbl-supp-m2
-#| tbl-cap: "Full posterior summary for M2 (pre-registered independent-coefficient genre model). Genre parameters are labelled `gh_{genre}_within` and `gh_{genre}_between` for the within- and between-person exposure terms."
+#| tbl-cap: "Full posterior summary for M2 (preregistered independent-coefficient genre model). Genre parameters are labelled `gh_{genre}_within` and `gh_{genre}_between` for the within- and between-person exposure terms."
 
 brms_summary_tt(h2_model)
 ```
@@ -126,10 +135,43 @@ brms_summary_tt(h2_model)
 
 ```{r}
 #| label: tbl-supp-m3
-#| tbl-cap: "Full posterior summary for M3 (hierarchical prior genre model). `tau_genre_within` and `tau_genre_between` are the learned hyperparameters governing partial pooling of the genre coefficients."
+#| tbl-cap: "Full posterior summary for M3 (hierarchical prior genre model), estimated in non-centred form. `sum_within` and `sum_between` are the common genre effects γ~W~ and γ~B~ (the centres of the distributions from which the genre coefficients are drawn), estimated as slopes on the summed genre exposures; the standard deviations of the two genre terms are τ~within~ and τ~between~, the spread of the genre coefficients around them. The genre coefficients `gh_{genre}_within` and `gh_{genre}_between` are γ plus each genre's deviation, computed at each posterior draw."
+
+# Non-centred M3 (manuscript chunk h2-hier-fit): beta_g = gamma + r_g, with
+# gamma = b_sum_* and r_g the multi-membership genre intercepts.
+m3_vars <- brms::variables(h2_hier_model)
+m3_group <- function(prefix) {
+  hit <- grep(sprintf("^sd_mm%s1%s2.*__Intercept$", prefix, prefix), m3_vars, value = TRUE)
+  stopifnot(length(hit) == 1)
+  sub("^sd_(.*)__Intercept$", "\\1", hit)
+}
+m3_gw <- m3_group("gW_")
+m3_gb <- m3_group("gB_")
+m3_r  <- function(g) m3_vars[startsWith(m3_vars, paste0("r_", g, "["))]
+m3_lev <- function(cols, g) sub(",Intercept\\]$", "", sub(paste0("r_", g, "["), "", cols, fixed = TRUE))
+m3_rw <- m3_r(m3_gw)
+m3_rb <- m3_r(m3_gb)
+stopifnot(length(m3_rw) == 14, length(m3_rb) == 14,
+          identical(m3_lev(m3_rw, m3_gw), m3_lev(m3_rb, m3_gb)))
+m3_genres <- m3_lev(m3_rw, m3_gw)
+m3_dr <- posterior::as_draws_df(h2_hier_model,
+                                variable = c("b_sum_within", "b_sum_between", m3_rw, m3_rb))
+m3_beta <- c(
+  setNames(lapply(m3_rw, function(v) m3_dr$b_sum_within + m3_dr[[v]]),
+           paste0("gh_", m3_genres, "_within")),
+  setNames(lapply(m3_rb, function(v) m3_dr$b_sum_between + m3_dr[[v]]),
+           paste0("gh_", m3_genres, "_between"))
+)
+m3_beta_draws <- posterior::as_draws_df(as.data.frame(c(
+  m3_beta, list(.chain = m3_dr$.chain, .iteration = m3_dr$.iteration, .draw = m3_dr$.draw)
+)))
 
 brms_summary_tt(h2_hier_model,
-                extra_pars = c("tau_genre_within", "tau_genre_between"))
+                extra_draws   = m3_beta_draws,
+                extra_section = "Genre coefficients (γ + genre deviation, per draw)",
+                group_labels  = setNames(c("genre, within-person (sd = τ within)",
+                                           "genre, between-person (sd = τ between)"),
+                                         c(m3_gw, m3_gb)))
 ```
 
 # M4: Multi-Membership (H2)

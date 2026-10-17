@@ -1,8 +1,19 @@
 # =============================================================================
+# SUPERSEDED 2026-10-13: every brms model now uses the brms default priors
+# (following co-author review: defaults are fine, no prior-robustness check
+# unless preregistered), and the prior-sensitivity analysis has been dropped
+# from the manuscript (Appendix D) and from scripts/refit_v126.sh. The script
+# below is kept for the record only; it encodes the old hyperpriors
+# (tau ~ Half-Normal(0, s), sigma_s ~ Normal(0, s)) and must not be run.
+# =============================================================================
+stop("superseded 2026-10-13: priors are brms defaults; no prior-sensitivity analysis")
+
+# =============================================================================
 # Prior-sensitivity refits for the H2 heterogeneity hyperpriors (review M13)
 # =============================================================================
 #
-# Refits M3 (hierarchical prior; tau ~ Half-Normal(0, s)) and M4
+# Refits M3 (hierarchical prior; genre coefficients ~ Normal(mu, tau) with
+# estimated centres mu ~ Student-t(3, 0, 0.5) and tau ~ Half-Normal(0, s)) and M4
 # (multi-membership; sigma_s ~ Half-Normal(0, s)) with halved and doubled
 # hyperprior scales around the manuscript's choices (M3: 0.1; M4: 0.3).
 # The base-scale fits are the manuscript's cached models and are not refit.
@@ -17,6 +28,15 @@
 # re-run/resume. A compact posterior summary is written to
 # data/processed/prior_sensitivity_summary.rds for later inclusion in the
 # manuscript (see notes/TODO.md).
+#
+# DATA VERSION: these fits must be regenerated for Open Play v1.2.6 and the
+# qualified-only analytic sample (analytic_pids() in R/01_preprocess.R,
+# applied by load_survey_data()). The brms `file =` targets for M4
+# (models/prior_sens_m4_*) are unchanged; the M3 targets were renamed to
+# models/prior_sens_m3mu_tau* on 2026-10-13, when M3's centres became estimated
+# parameters (the old models/prior_sens_m3_tau* fits are zero-centred). The
+# v1.2.1 fits are archived to models/archive_v121/ by scripts/refit_v126.sh,
+# and the v1.2.1 summary to data/processed_v121/prior_sensitivity_summary.rds.
 # =============================================================================
 
 library(here)
@@ -38,6 +58,8 @@ M3_SCALES <- c(0.15, 0.6)   # manuscript uses 0.3
 
 # --- Replicates manuscript.qmd chunk `model-data` ----------------------------
 
+# load_survey_data() restricts to analytic_pids(): qualified at intake AND
+# >= 1 valid SWEMWBS in waves 1-6.
 survey <- load_survey_data()
 genre_wave_long <- read_csv(here("data/processed/genre_wave_long.csv"), show_col_types = FALSE)
 total_playtime  <- read_csv(here("data/processed/total_playtime.csv"),  show_col_types = FALSE)
@@ -115,13 +137,23 @@ stopifnot(length(mm_groups) >= 1)
 mm_group_name <- mm_groups[1]
 
 # --- M3 refits: tau ~ Half-Normal(0, s) --------------------------------------
+# Mirrors manuscript chunk h2-hier-fit: genre coefficients are drawn from
+# Normal(mu, tau), with the centres mu_genre_within / mu_genre_between estimated
+# under the same Student-t(3, 0, 0.5) prior as the other slopes; only the tau
+# hyperprior scale s varies.
 
 sv_hier_scale <- function(s) {
-  stanvar(scode = "real<lower=0> tau_genre_within;\nreal<lower=0> tau_genre_between;",
-          block = "parameters") +
+  stanvar(scode = paste(
+    "real<lower=0> tau_genre_within;",
+    "real<lower=0> tau_genre_between;",
+    "real mu_genre_within;",
+    "real mu_genre_between;",
+    sep = "\n"), block = "parameters") +
   stanvar(scode = paste(
     sprintf("target += normal_lpdf(tau_genre_within | 0, %s) - normal_lccdf(0 | 0, %s);", s, s),
     sprintf("target += normal_lpdf(tau_genre_between | 0, %s) - normal_lccdf(0 | 0, %s);", s, s),
+    "target += student_t_lpdf(mu_genre_within | 3, 0, 0.5);",
+    "target += student_t_lpdf(mu_genre_between | 3, 0, 0.5);",
     sep = "\n"), block = "model")
 }
 
@@ -132,8 +164,10 @@ h2_hier_formula <- bf(paste(
 hier_priors <- c(
   set_prior("student_t(3, 0, 0.5)", class = "b"),
   set_prior("student_t(3, 3, 2)",   class = "Intercept"),
-  do.call(c, lapply(gh_within,  \(g) set_prior("normal(0, tau_genre_within)",  class = "b", coef = g))),
-  do.call(c, lapply(gh_between, \(g) set_prior("normal(0, tau_genre_between)", class = "b", coef = g)))
+  do.call(c, lapply(gh_within,  \(g) set_prior("normal(mu_genre_within, tau_genre_within)",
+                                               class = "b", coef = g))),
+  do.call(c, lapply(gh_between, \(g) set_prior("normal(mu_genre_between, tau_genre_between)",
+                                               class = "b", coef = g)))
 )
 
 m3_fits <- list()
@@ -148,7 +182,7 @@ for (s in M2_SCALES) {
     family   = gaussian(),
     chains   = 4, iter = 8000, warmup = 4000, seed = 2025,
     control  = list(adapt_delta = 0.999, max_treedepth = 15),
-    file     = here(sprintf("models/prior_sens_m3_tau%s", tag))
+    file     = here(sprintf("models/prior_sens_m3mu_tau%s", tag))
   )
 }
 
@@ -187,9 +221,11 @@ summarise_tau <- function(fit, par) {
 # mis-handles the multiple named-list arguments and drops the columns.
 summary_tbl <- bind_rows(c(
   imap(m3_fits, \(f, s) summarise_tau(f, "tau_genre_within") |>
-         mutate(model = "M3", parameter = "tau_within", scale = as.numeric(s))),
+         mutate(model = "M3", parameter = "tau_within", scale = as.numeric(s),
+                m3_centre = "estimated")),
   imap(m3_fits, \(f, s) summarise_tau(f, "tau_genre_between") |>
-         mutate(model = "M3", parameter = "tau_between", scale = as.numeric(s))),
+         mutate(model = "M3", parameter = "tau_between", scale = as.numeric(s),
+                m3_centre = "estimated")),
   imap(m4_fits, \(f, s) {
     dn <- names(as_draws_df(f))
     sw <- grep(paste0("sd_", mm_group_name, ".*total_within"),  dn, value = TRUE)[1]

@@ -1,16 +1,39 @@
 # Fit the exploratory daily-timescale models (see notes/analysis_plan_daily.md,
 # local working docs).
-# Prespecified: the exposure window, prior scales, and model set were fixed
-# by the plan BEFORE any exposure-outcome model was estimated. The
-# within-person SD ratio computed here sets the (weakly informative) prior
-# scales; the equivalence benchmarks reported in the manuscript are derived
-# separately per instrument (see the plan). Fits cache under models/daily/. Model constructions mirror the
-# registered biweekly models in manuscript.qmd (M1 h1-fit, M3 h2-hier-fit,
-# M4 mm-formula-setup) with priors rescaled by r = SESOI_LS / 0.06.
+# Prespecified: the exposure window and model set were fixed by the plan
+# BEFORE any exposure-outcome model was estimated. The within-person SD ratio
+# computed here is saved to models/daily/sesoi.rds for the SESOI transfer;
+# the equivalence benchmarks reported in the manuscript are derived
+# separately per instrument (see the plan). Fits cache under models/daily/.
+# Model constructions mirror the biweekly models in manuscript.qmd (M1
+# h1-fit, M3 h2-hier-fit, M4 mm-formula-setup).
+#
+# PRIORS (since 2026-10-13, following co-author review): brms defaults, as in
+# the biweekly models. brms sets the intercept location (median of the
+# outcome) and the scale S = max(2.5, mad(outcome)) of the intercept and all
+# SD priors from the modelled outcome; slopes are flat. M3-D is fitted in
+# non-centred multi-membership form (since 2026-10-14), so its centres gamma
+# are flat slopes and its spreads tau are brms group-level SDs with the
+# default half-Student-t(3, 0, S); no prior is set. Until 2026-10-13 the
+# plan's priors were used instead: the registered biweekly scales times
+# r = SESOI_LS / 0.06 (b student_t(3, 0, 0.5 r), Intercept student_t(3, 50, 25),
+# tau Half-Normal(0, 0.1 r), mm sd normal(0, 0.3 r)).
 #
 # Usage: Rscript R/fit_daily_models.R mm     (M4 multi-membership, longest)
 #        Rscript R/fit_daily_models.R rest   (M1 + M1-full + M3 + lagged)
 # The two invocations are independent and can run concurrently.
+#
+# DATA VERSION: these fits (and models/daily/sesoi.rds) must be regenerated
+# for Open Play v1.2.6 and the qualified-only analytic sample (analytic_pids()
+# in R/01_preprocess.R: intake qualified == TRUE AND >= 1 valid SWEMWBS in
+# biweekly waves 1-6). The diary frame is filtered upstream in
+# R/04_daily_aggregate.R (re-run it first); the biweekly SWEMWBS and
+# life-satisfaction frames are filtered below. The brms `file =` targets are
+# unchanged except M3-D's: models/daily/m3_daily_ls_v3 (2026-10-13) when its
+# genre-distribution centres became estimated parameters (the _v2 fit is
+# zero-centred), and models/daily/m3_daily_ls_v4 (2026-10-14) for the
+# non-centred form; the v1.2.1 fits are archived to
+# models/daily/archive_v121/ by scripts/refit_v126.sh before refitting.
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -18,6 +41,11 @@ suppressPackageStartupMessages({
   library(lme4)
   library(here)
 })
+
+# Shared sample definition (analytic_pids()); sourcing does not run the
+# biweekly pipeline (guarded by sys.nframe()).
+source(here("R/01_preprocess.R"))
+pids_analytic <- analytic_pids()
 
 which_block <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge", "m2", "dyn")) {
@@ -31,6 +59,8 @@ raw_frame <- read_csv(here("data/processed/daily/daily_model_frame.csv"),
                       show_col_types = FALSE)
 gh_cols <- sort(grep("^gh_", names(raw_frame), value = TRUE))
 stopifnot(length(gh_cols) == 14, "covered" %in% names(raw_frame))
+stopifnot("daily_model_frame.csv predates the analytic-sample rule; re-run R/04_daily_aggregate.R" =
+            all(raw_frame$pid %in% pids_analytic))
 
 # HYBRID within-between decomposition (analysis plan, amendment 8c):
 # within-person terms are deviations from the person's same-day mean;
@@ -87,7 +117,7 @@ within_sd <- function(x, id) {
 
 biweekly <- read_csv(here("data/clean/survey_biweekly.csv.gz"),
                      show_col_types = FALSE) |>
-  filter(wave >= 1, wave <= 6) |>
+  filter(wave >= 1, wave <= 6, pid %in% pids_analytic) |>
   mutate(wemwbs = rowMeans(across(starts_with("wemwbs_")))) |>
   filter(!is.na(wemwbs), wemwbs >= 1)
 
@@ -112,13 +142,18 @@ message(sprintf(
   s_w_swemwbs, s_w_ls, s_w_av, sesoi_ls, sesoi_av, r_ls
 ))
 
-# ---- Prior scales (registered scales times r) ------------------------------
+# ---- Priors ------------------------------------------------------------------
+# brms defaults throughout (see header); no prior is set below.
 
-b_scale     <- 0.5 * r_ls   # registered student_t(3, 0, 0.5)
-tau_scale   <- 0.1 * r_ls   # registered Half-Normal(0, 0.1)
-sigma_scale <- 0.3 * r_ls   # registered mm sd normal(0, 0.3)
-prior_b         <- sprintf("student_t(3, 0, %.3f)", b_scale)
-prior_intercept <- "student_t(3, 50, 25)"  # midpoint + half-range, as registered
+# Scale S of brms's default SD prior, half-Student-t(3, 0, S), for a formula
+# and data (read from brms::default_prior(), class sd, so it is exactly what
+# brms uses for the other SDs of that fit).
+default_sd_scale <- function(formula, data) {
+  dp <- brms::default_prior(formula, data = data, family = gaussian())
+  x  <- dp$prior[dp$class == "sd" & dp$group == "" & dp$coef == ""]
+  stopifnot(length(x) == 1, grepl("^student_t\\(3, 0, [0-9.]+\\)$", x))
+  as.numeric(sub("^student_t\\(3, 0, ([0-9.]+)\\)$", "\\1", x))
+}
 
 model_data_ls <- frame |> filter(!is.na(life_sat))
 message(sprintf("Rows: life_sat %d, pids %d",
@@ -151,8 +186,6 @@ if (which_block == "dyn") {
          ar(time = day, gr = pid, p = 1) +
          (1 + total_within | pid)),
     data   = dyn_data,
-    prior  = set_prior(prior_b, class = "b") +
-             set_prior(prior_intercept, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
@@ -165,8 +198,6 @@ if (which_block == "dyn") {
     bf(life_sat ~ total_within + total_between + wh_w + wh_b +
          (1 + total_within | pid)),
     data   = dyn_data,
-    prior  = set_prior(prior_b, class = "b") +
-             set_prior(prior_intercept, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
@@ -177,16 +208,14 @@ if (which_block == "dyn") {
 } else if (which_block == "m2") {
 
   # M2-D: independent-coefficient genre specification (mirrors the
-  # registered h2_genre_model), primary outcome only. Same prior family as
-  # the other daily fits. Its raw per-draw coefficient SDs carry sampling
+  # registered h2_genre_model), primary outcome only. brms default priors,
+  # as for the other daily fits. Its raw per-draw coefficient SDs carry sampling
   # noise, as in the registered analysis; reported with that caveat.
   m2_rhs <- paste(c(gh_w, gh_b), collapse = " + ")
   message("Fitting M2-D (life_sat)...")
   invisible(brm(
     bf(as.formula(paste("life_sat ~", m2_rhs, "+ (1 | pid)"))),
     data   = model_data_ls,
-    prior  = set_prior(prior_b, class = "b") +
-             set_prior(prior_intercept, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
@@ -203,7 +232,7 @@ if (which_block == "dyn") {
   # survey, zero-filled exposure, no coverage restriction).
   bls <- read_csv(here("data/clean/survey_biweekly.csv.gz"),
                   show_col_types = FALSE) |>
-    filter(wave >= 1, wave <= 6, !is.na(life_sat)) |>
+    filter(wave >= 1, wave <= 6, !is.na(life_sat), pid %in% pids_analytic) |>
     select(pid, wave, life_sat)
   message(sprintf("Biweekly life_sat: n=%d, pids=%d, min=%.1f, max=%.1f",
                   nrow(bls), n_distinct(bls$pid), min(bls$life_sat),
@@ -222,11 +251,9 @@ if (which_block == "dyn") {
 
   s_w_bls    <- within_sd(bframe$life_sat, bframe$pid)
   sesoi_bls  <- 0.06 * s_w_bls / s_w_swemwbs
-  r_bls      <- sesoi_bls / 0.06
   scale_max  <- max(bframe$life_sat)
-  int_prior  <- if (scale_max <= 10) "student_t(3, 5, 2.5)" else "student_t(3, 50, 25)"
-  message(sprintf("Bridge SESOI: s_w(bLS)=%.3f -> SESOI_bLS=%.3f (r=%.1f); intercept prior %s",
-                  s_w_bls, sesoi_bls, r_bls, int_prior))
+  message(sprintf("Bridge SESOI: s_w(bLS)=%.3f -> SESOI_bLS=%.3f (brms default priors)",
+                  s_w_bls, sesoi_bls))
 
   s_all <- readRDS(here("models/daily/sesoi.rds"))
   s_all$s_w_bls   <- s_w_bls
@@ -238,8 +265,6 @@ if (which_block == "dyn") {
   invisible(brm(
     bf(life_sat ~ total_within + total_between + (1 + total_within | pid)),
     data   = bframe,
-    prior  = set_prior(sprintf("student_t(3, 0, %.3f)", 0.5 * r_bls), class = "b") +
-             set_prior(int_prior, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
@@ -254,8 +279,6 @@ if (which_block == "dyn") {
   invisible(brm(
     bf(life_sat ~ total_within + total_between + (1 + total_within | pid)),
     data   = model_data_ls,
-    prior  = set_prior(prior_b, class = "b") +
-             set_prior(prior_intercept, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
@@ -268,8 +291,6 @@ if (which_block == "dyn") {
   invisible(brm(
     bf(life_sat ~ total_within + total_between + (1 + total_within | pid)),
     data   = frame_full |> filter(!is.na(life_sat)),
-    prior  = set_prior(prior_b, class = "b") +
-             set_prior(prior_intercept, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
@@ -289,8 +310,6 @@ if (which_block == "dyn") {
   invisible(brm(
     bf(life_sat ~ xfl_within + total_between + (1 + xfl_within | pid)),
     data   = xfl_data,
-    prior  = set_prior(prior_b, class = "b") +
-             set_prior(prior_intercept, class = "Intercept"),
     family = gaussian(),
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
@@ -298,46 +317,56 @@ if (which_block == "dyn") {
   ))
   message("Exclude-floored sensitivity done.")
 
-  # M3-D: hierarchical prior over genre coefficients (mirrors h2-hier-fit)
-  sv_hier <- stanvar(
-    scode = "real<lower=0> tau_genre_within;\nreal<lower=0> tau_genre_between;",
-    block = "parameters"
-  ) +
-  stanvar(
-    scode = paste(
-      sprintf("target += normal_lpdf(tau_genre_within | 0, %.3f) - normal_lccdf(0 | 0, %.3f);",
-              tau_scale, tau_scale),
-      sprintf("target += normal_lpdf(tau_genre_between | 0, %.3f) - normal_lccdf(0 | 0, %.3f);",
-              tau_scale, tau_scale),
-      sep = "\n"
-    ),
-    block = "model"
-  )
-  hier_priors_within <- do.call(c, lapply(gh_w, function(g) {
-    set_prior("normal(0, tau_genre_within)", class = "b", coef = g)
-  }))
-  hier_priors_between <- do.call(c, lapply(gh_b, function(g) {
-    set_prior("normal(0, tau_genre_between)", class = "b", coef = g)
-  }))
-  hier_priors <- c(
-    set_prior(prior_b, class = "b"),
-    set_prior(prior_intercept, class = "Intercept"),
-    hier_priors_within,
-    hier_priors_between
-  )
-  hier_rhs <- paste(c(gh_w, gh_b), collapse = " + ")
+  # M3-D: hierarchical prior over genre coefficients (mirrors h2-hier-fit).
+  # Each genre's within-person coefficient is drawn from
+  # Normal(gamma_within, tau_within), each between-person coefficient from
+  # Normal(gamma_between, tau_between). Since 2026-10-14 it is fitted in the
+  # non-centred form, as M3: beta_g = gamma + r_g with r_g ~ Normal(0, tau)
+  # gives sum_g x_g beta_g = gamma * sum_g x_g + sum_g x_g r_g, i.e. a fixed
+  # slope on the summed exposure plus a multi-membership intercept over the 14
+  # genres weighted by the exposures (scale = FALSE: the weights are
+  # exposures, the within-person ones signed, not shares). brms samples
+  # r = tau * z, so the funnel of the centred stanvars version (29 divergent
+  # transitions in models/daily/m3_daily_ls_v3 at adapt_delta = 0.9995) is
+  # removed. All priors are brms defaults, so no prior and no stanvars: gamma
+  # = b_sum_within / b_sum_between is flat, and tau = the SDs of the two mm
+  # intercepts take the default half-Student-t(3, 0, S_D), with S_D the
+  # scale brms assigns to every SD of this fit (default_sd_scale(); for
+  # life_sat on 0-100 it is set by mad(life_sat): S_D = 22.2 on the v1.2.6
+  # frame as of 2026-10-13, printed to the log at fit time).
+  hier_genres <- sub("^gh_", "", gh_cols)
+  hier_gw <- paste0("gW_", seq_along(gh_cols))
+  hier_gb <- paste0("gB_", seq_along(gh_cols))
+  hier_data <- model_data_ls
+  for (k in seq_along(gh_cols)) {
+    hier_data[[hier_gw[k]]] <- factor(hier_genres[k], levels = hier_genres)
+    hier_data[[hier_gb[k]]] <- factor(hier_genres[k], levels = hier_genres)
+  }
+  hier_data$sum_within  <- rowSums(hier_data[gh_w])
+  hier_data$sum_between <- rowSums(hier_data[gh_b])
+  hier_mm_term <- function(g_cols, x_cols) {
+    sprintf("(1 | mm(%s, weights = cbind(%s), scale = FALSE))",
+            paste(g_cols, collapse = ", "), paste(x_cols, collapse = ", "))
+  }
+  hier_formula <- bf(paste(
+    "life_sat ~ sum_within + sum_between + (1 | pid) +",
+    hier_mm_term(hier_gw, gh_w), "+", hier_mm_term(hier_gb, gh_b)
+  ))
+  tau_prior_scale_m3d <- default_sd_scale(hier_formula, hier_data)
+  message(sprintf("M3-D tau prior: half-Student-t(3, 0, %s) (brms default sd scale)",
+                  tau_prior_scale_m3d))
 
-  message("Fitting M3-D (life_sat)...")
+  message("Fitting M3-D (life_sat), non-centred multi-membership form...")
   invisible(brm(
-    bf(as.formula(paste("life_sat ~", hier_rhs, "+ (1 | pid)"))),
-    data     = model_data_ls,
-    prior    = hier_priors,
-    stanvars = sv_hier,
+    hier_formula,
+    data     = hier_data,
     family   = gaussian(),
     chains   = 4, iter = 8000, warmup = 4000, cores = 4, seed = 2025,
-    # One documented escalation (analysis plan 5): 16 divergences at 0.999
-    control  = list(adapt_delta = 0.9995, max_treedepth = 15),
-    file = here("models/daily/m3_daily_ls_v2"), file_refit = "never"
+    # 0.999 as for M3. The one documented escalation to 0.9995 (analysis plan
+    # 5: 16 divergences at 0.999) was for the centred form and is not needed
+    # once the funnel is removed.
+    control  = list(adapt_delta = 0.999, max_treedepth = 15),
+    file = here("models/daily/m3_daily_ls_v4"), file_refit = "never"
   ))
   message("M3-D (life_sat) done.")
 
@@ -378,12 +407,8 @@ if (which_block == "dyn") {
   if (length(mm_groups) == 0) stop("No mm() group found in get_prior() output.")
   message(sprintf("mm() group name: %s", mm_groups[1]))
 
-  mm_priors <- c(
-    set_prior(prior_b, class = "b"),
-    set_prior(prior_intercept, class = "Intercept"),
-    set_prior(sprintf("normal(0, %.3f)", sigma_scale),
-              class = "sd", group = mm_groups[1])
-  )
+  # Priors: brms defaults; sigma_s (the mm-group SD) takes the default
+  # half-Student-t(3, 0, S) of all SDs.
 
   # Registered iterations (8000/4000): at 4000 the bulk-ESS of
   # b_total_between fell below the ~400 convention (371); adapt_delta 0.995
@@ -392,7 +417,6 @@ if (which_block == "dyn") {
   invisible(brm(
     formula = mm_formula,
     data    = mm_data,
-    prior   = mm_priors,
     family  = gaussian(),
     chains  = 4, iter = 8000, warmup = 4000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.995, max_treedepth = 15),

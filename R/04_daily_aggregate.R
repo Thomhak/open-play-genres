@@ -59,6 +59,12 @@
 #
 # Prespecification note: this script computes marginal distributions only. It
 # deliberately does NOT cross any exposure with any wellbeing outcome.
+#
+# Sample (Open Play v1.2.6): the diary is restricted to analytic_pids() from
+# R/01_preprocess.R (intake qualified == TRUE AND >= 1 valid SWEMWBS in
+# biweekly waves 1-6), the same participants as the biweekly analyses. The
+# filter is applied once, in load_daily_survey(), so every daily consumer
+# (fit_daily_models.R, manuscript daily-setup) sees the same frame.
 # =============================================================================
 
 library(here)
@@ -66,6 +72,10 @@ library(tidyverse)
 library(data.table)
 
 here::i_am("R/04_daily_aggregate.R")
+
+# Shared sample definition (analytic_pids()); sourcing does not run the
+# biweekly pipeline (guarded by sys.nframe()).
+source(here("R/01_preprocess.R"))
 
 # =============================================================================
 # Constants
@@ -127,6 +137,17 @@ fmt <- function(x, digits = 3) {
 #' @return list(diary = tibble, n_att_failed = integer)
 load_daily_survey <- function() {
   raw <- read_csv(here("data/clean/survey_daily.csv.gz"), show_col_types = FALSE)
+
+  # Analytic sample: qualified at intake AND >= 1 valid SWEMWBS (01_preprocess.R).
+  pids_analytic <- analytic_pids()
+  n_raw_rows <- nrow(raw)
+  n_raw_pids <- n_distinct(raw$pid)
+  raw <- raw |> filter(pid %in% pids_analytic)
+  message(sprintf(
+    "  Sample rule: kept %d of %d diary rows (%d of %d participants) from analytic_pids()",
+    nrow(raw), n_raw_rows, n_distinct(raw$pid), n_raw_pids
+  ))
+  stopifnot("no diary rows left after the sample rule" = nrow(raw) > 0)
 
   # Attention check: the Open Play data paper states failures were already
   # removed upstream. Filter only if any survivors are present.
@@ -316,10 +337,11 @@ load_meta_long <- function() {
 }
 
 #' Load the biweekly survey and compute SWEMWBS as the 1-5 item mean.
-#' Mirrors load_survey_data() in 01_preprocess.R.
+#' Mirrors load_survey_data() in 01_preprocess.R, restricted to analytic_pids().
 #' @return tibble: pid, wave, wemwbs
 load_biweekly_wemwbs <- function() {
   read_csv(here("data/clean/survey_biweekly.csv.gz"), show_col_types = FALSE) |>
+    filter(pid %in% analytic_pids()) |>
     mutate(wemwbs = rowMeans(across(starts_with("wemwbs_")), na.rm = FALSE)) |>
     filter(wave >= 1, wave <= N_WAVES) |>
     select(pid, wave, wemwbs)
@@ -913,8 +935,14 @@ daily_aggregate <- function() {
     100 * sum(offsets$n_viol, na.rm = TRUE) / sum(offsets$n_resp, na.rm = TRUE)
   ))
   viol_share <- sum(offsets$n_viol, na.rm = TRUE) / sum(offsets$n_resp, na.rm = TRUE)
-  stopifnot("availability violations outside expected band (5-8%)" =
-              viol_share > 0.05 & viol_share < 0.08)
+  # Band recalibrated for the v1.2.6 analytic sample: the old 5-8% band was
+  # set on the unrestricted v1.2.1 diary (6.48%). Restricting to analytic_pids()
+  # gives 3.98% in v1.2.6 and 3.95% on the v1.2.1 diary for the same pids, so
+  # the drop is sample composition (participants whose `qualified` flag was
+  # revoked upstream answered outside the availability window far more often),
+  # not a change in the timezone conversion.
+  stopifnot("availability violations outside expected band (3-5%)" =
+              viol_share > 0.03 & viol_share < 0.05)
 
   diary <- add_windows(diary, offsets)
   stopifnot(

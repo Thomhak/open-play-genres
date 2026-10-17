@@ -1,0 +1,16 @@
+prior,class,coef,group,resp,dpar,nlpar,lb,ub,tag,source
+"student_t(3, 3.3, 2.5)",Intercept,,,,,,,,,default
+,b,,,,,,,,,default
+,b,total_between,,,,,,,,default
+,b,total_within,,,,,,,,default
+lkj(1),cor,,,,,,,,,default
+,cor,,mmg_1g_2g_3g_4g_5g_6g_7g_8g_9g_10g_11g_12g_13g_14,,,,,,,default
+,cor,,pid,,,,,,,default
+"student_t(3, 0, 2.5)",sd,,,,,,0,,,default
+,sd,,mmg_1g_2g_3g_4g_5g_6g_7g_8g_9g_10g_11g_12g_13g_14,,,,,,,default
+,sd,total_between,mmg_1g_2g_3g_4g_5g_6g_7g_8g_9g_10g_11g_12g_13g_14,,,,,,,default
+,sd,total_within,mmg_1g_2g_3g_4g_5g_6g_7g_8g_9g_10g_11g_12g_13g_14,,,,,,,default
+,sd,,pid,,,,,,,default
+,sd,Intercept,pid,,,,,,,default
+,sd,total_within,pid,,,,,,,default
+"student_t(3, 0, 2.5)",sigma,,,,,,0,,,default

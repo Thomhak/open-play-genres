@@ -24,16 +24,34 @@
 #   - The output is long-format (pid, wave, genre, hours_per_day) rather than
 #     wide, as the wide format is ambiguous with overlapping genre counts.
 #
-# Pre-registered analyses are preserved in R/01_preprocess_prereg.R and will
-# appear in supplementary materials.
+# The preregistered primary-genre attribution is produced from this
+# script's functions by R/prep_primary_genre.R and enters the registered
+# frequentist analyses in the manuscript's Appendix D (the frozen
+# R/01_preprocess_prereg.R uses an older taxonomy and is not used).
 #
 # This script:
 #   1. Loads game_metadata.csv.gz and expands genres to long format
 #   2. Loads telemetry (Xbox, Steam, Nintendo) and joins long-format metadata
-#   3. Assigns waves from participant-specific ideal_baseline_day
+#   3. Assigns waves from participant-specific ideal_baseline_day, read from
+#      the sidecar data/reference/baseline_days.csv (see below)
 #   4. Aggregates to (pid, wave, genre) long format
 #   5. Computes total (unique, no double-counting) playtime per (pid, wave)
 #   6. Saves processed outputs to data/processed/
+#
+# DATA VERSION AND ANALYTIC SAMPLE (Open Play v1.2.6, Zenodo 22811439):
+#   - Analytic participants = intake `qualified == TRUE` in
+#     data/clean/survey_intake.csv.gz AND at least one valid (complete-item)
+#     SWEMWBS in biweekly waves 1-6; see analytic_pids(). The v1.2.4 upstream
+#     fix revoked `qualified` for 306 intakes. load_survey_data() applies the
+#     filter, so every consumer that sources this file inherits it, and the
+#     processed telemetry outputs contain analytic participants only (waves
+#     are assigned only to pids with a baseline in the filtered survey).
+#   - Releases >= v1.2.5 dropped ideal_baseline_day from survey_biweekly.
+#     It is supplied by data/reference/baseline_days.csv (pid,
+#     ideal_baseline_day; one row per pid), written once by
+#     R/00_baseline_days.R from the v1.2.1 biweekly file. The values are
+#     identical to v1.2.1, so the outputs for retained participants are
+#     unchanged from the v1.2.1 pipeline.
 # =============================================================================
 
 library(here)
@@ -54,6 +72,61 @@ WAVE_LENGTH_DAYS <- 14L
 N_WAVES <- 6L
 # +14 day shift so wave W covers the 14 days *ending* on the wave W survey date
 WAVE_SHIFT_DAYS <- 14L
+# Per-participant baseline day (dropped upstream in v1.2.5); written by
+# R/00_baseline_days.R from Open Play v1.2.1.
+BASELINE_DAYS_PATH <- "data/reference/baseline_days.csv"
+
+# =============================================================================
+# Analytic Sample
+# =============================================================================
+
+#' Participants whose intake record is flagged `qualified == TRUE`.
+#' Participants without an intake record are not returned.
+#' @param clean_dir Folder of the clean release files (default: data/clean)
+#' @return Character vector of pids
+qualified_pids <- function(clean_dir = "data/clean") {
+  read_csv(
+    here(clean_dir, "survey_intake.csv.gz"),
+    show_col_types = FALSE,
+    col_select = c(pid, qualified)
+  ) |>
+    filter(qualified %in% TRUE) |>
+    distinct(pid) |>
+    pull(pid)
+}
+
+#' Analytic participants: qualified at intake AND at least one valid SWEMWBS
+#' (all seven items present) in biweekly waves 1-N_WAVES.
+#' This is the single sample definition used by every script and the
+#' manuscript (biweekly and daily analyses alike).
+#' The arguments exist only for the earlier-sample comparison of Deviation D7
+#' (Appendix D): analytic_pids("data/clean_v121", require_qualified = FALSE)
+#' returns the v1.2.1 sample (anyone with a valid SWEMWBS). The defaults give
+#' the analytic sample.
+#' @param clean_dir Folder of the clean release files (default: data/clean)
+#' @param require_qualified Keep only qualified intakes (default TRUE)
+#' @return Character vector of pids
+analytic_pids <- function(clean_dir = "data/clean", require_qualified = TRUE) {
+  keep <- if (require_qualified) qualified_pids(clean_dir) else NULL
+  read_csv(here(clean_dir, "survey_biweekly.csv.gz"), show_col_types = FALSE) |>
+    filter(wave >= 1, wave <= N_WAVES, !require_qualified | pid %in% keep) |>
+    mutate(wemwbs = rowMeans(across(starts_with("wemwbs_")), na.rm = FALSE)) |>
+    filter(!is.na(wemwbs)) |>
+    distinct(pid) |>
+    pull(pid)
+}
+
+#' Load the per-participant baseline-day sidecar (pid, ideal_baseline_day).
+#' @return tibble with one row per pid
+load_baseline_days <- function() {
+  p <- here(BASELINE_DAYS_PATH)
+  if (!file.exists(p)) {
+    stop("Missing ", BASELINE_DAYS_PATH, "; run Rscript R/00_baseline_days.R")
+  }
+  out <- read_csv(p, col_types = cols(pid = "c", ideal_baseline_day = "D"))
+  stopifnot(nrow(out) == n_distinct(out$pid), !anyNA(out$ideal_baseline_day))
+  out
+}
 
 # =============================================================================
 # Genre Standardization
@@ -237,10 +310,12 @@ populate_xbox_genres <- function(meta) {
 #'      "Strategy" → one row, so session counts are not inflated).
 #'   5. Count n_genres_valid: distinct genres remaining after collapsing.
 #'
+#' @param clean_dir Folder of the clean release files (default: data/clean;
+#'   "data/clean_v121" only for the earlier-sample files, R/prep_v121_sample.R)
 #' @return tibble: original_name, platform, genre, n_genres_valid
-load_game_metadata_long <- function() {
+load_game_metadata_long <- function(clean_dir = "data/clean") {
   meta <- read_csv(
-    here("data/clean/game_metadata.csv.gz"),
+    here(clean_dir, "game_metadata.csv.gz"),
     show_col_types = FALSE
   )
 
@@ -289,18 +364,19 @@ load_platform_sessions <- function(file, platform, date_col,
 
 #' Load raw sessions for all platforms, without any genre join.
 #' Used to compute total playtime free of multi-genre double-counting.
+#' @param clean_dir Folder of the clean release files (default: data/clean)
 #' @return tibble: pid, platform, title_id, date, duration
-load_raw_sessions <- function() {
+load_raw_sessions <- function(clean_dir = "data/clean") {
   bind_rows(
     load_platform_sessions(
-      "data/clean/xbox.csv.gz", "Xbox", "session_start"
+      file.path(clean_dir, "xbox.csv.gz"), "Xbox", "session_start"
     ),
     load_platform_sessions(
-      "data/clean/steam.csv.gz", "Steam", "approximate_session_start",
+      file.path(clean_dir, "steam.csv.gz"), "Steam", "approximate_session_start",
       duration_col = "minutes"
     ),
     load_platform_sessions(
-      "data/clean/nintendo.csv.gz", "Nintendo", "session_start"
+      file.path(clean_dir, "nintendo.csv.gz"), "Nintendo", "session_start"
     )
   )
 }
@@ -308,8 +384,9 @@ load_raw_sessions <- function() {
 #' Load telemetry joined to long-format metadata.
 #' Sessions for multi-genre games appear once per genre (many-to-many join).
 #' @param meta_long Long-format metadata from load_game_metadata_long()
+#' @param clean_dir Folder of the clean release files (default: data/clean)
 #' @return tibble: pid, platform, title_id, date, duration, genre, n_genres_valid
-load_genre_sessions <- function(meta_long) {
+load_genre_sessions <- function(meta_long, clean_dir = "data/clean") {
   join_genres <- function(sessions, platform_name) {
     sessions |>
       left_join(
@@ -323,14 +400,14 @@ load_genre_sessions <- function(meta_long) {
 
   bind_rows(
     load_platform_sessions(
-      "data/clean/xbox.csv.gz", "Xbox", "session_start"
+      file.path(clean_dir, "xbox.csv.gz"), "Xbox", "session_start"
     ) |> join_genres("Xbox"),
     load_platform_sessions(
-      "data/clean/steam.csv.gz", "Steam", "approximate_session_start",
+      file.path(clean_dir, "steam.csv.gz"), "Steam", "approximate_session_start",
       duration_col = "minutes"
     ) |> join_genres("Steam"),
     load_platform_sessions(
-      "data/clean/nintendo.csv.gz", "Nintendo", "session_start"
+      file.path(clean_dir, "nintendo.csv.gz"), "Nintendo", "session_start"
     ) |> join_genres("Nintendo")
   )
 }
@@ -343,8 +420,30 @@ load_genre_sessions <- function(meta_long) {
 #' The previous implementation used rowSums (7-35 scale), which produced
 #' coefficients 7x larger than the scale the SESOI is defined in. See plan
 #' document for the SESOI scale correction.
-load_survey_data <- function() {
-  read_csv(here("data/clean/survey_biweekly.csv.gz"), show_col_types = FALSE) |>
+#'
+#' Rows are restricted to `pids` (default: analytic_pids(), i.e. qualified at
+#' intake with at least one valid SWEMWBS). The baseline day comes from the
+#' sidecar data/reference/baseline_days.csv, because Open Play >= v1.2.5 no
+#' longer ships ideal_baseline_day; any baseline columns still present in the
+#' file (v1.2.1) are dropped before the join.
+#' @param pids Character vector of participant ids to keep
+#' @param clean_dir Folder of the clean release files (default: data/clean)
+#' @param baseline_days Baseline-day table (pid, ideal_baseline_day); default
+#'   the sidecar. NULL uses the file's own ideal_baseline_day column instead
+#'   (v1.2.1 files only; used for the earlier-sample comparison, D7).
+load_survey_data <- function(pids = analytic_pids(), clean_dir = "data/clean",
+                             baseline_days = load_baseline_days()) {
+  raw <- read_csv(here(clean_dir, "survey_biweekly.csv.gz"), show_col_types = FALSE) |>
+    filter(pid %in% pids)
+  if (is.null(baseline_days)) {
+    stopifnot("ideal_baseline_day" %in% names(raw))
+    raw <- raw |> select(-any_of("baseline_day"))
+  } else {
+    raw <- raw |>
+      select(-any_of(c("ideal_baseline_day", "baseline_day"))) |>
+      left_join(baseline_days, by = "pid")
+  }
+  out <- raw |>
     mutate(
       wemwbs = rowMeans(across(starts_with("wemwbs_")), na.rm = FALSE),
       baseline_date = as.Date(ideal_baseline_day)
@@ -363,6 +462,9 @@ load_survey_data <- function() {
       life_sat,
       self_reported_biweekly_play
     )
+  # Every retained participant must have a baseline day (wave assignment).
+  stopifnot(!anyNA(out$baseline_date))
+  out
 }
 
 # =============================================================================
