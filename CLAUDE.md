@@ -185,7 +185,7 @@ _extensions/                        # Quarto typst preprint extension (mvuorre/p
 renv.lock                           # R dependency lockfile (incl. cmdstanr from the Stan R-universe)
 .Rprofile                           # Activates renv
 .gitignore                          # Ignores data (except data/reference and the sim_recovery CSVs), models, caches, notes, local folders
-docs/                               # GitHub Pages output: index.html, manuscript.{docx,pdf}, manuscript_v43.{docx,pdf,html}
+docs/                               # GitHub Pages output: index.html, manuscript.{docx,pdf}, supplement_model_output.html
 models/                             # LOCAL ONLY (22 GB): current fits; archive_v121/, archive_v126/, archive_pre_wave7/ and daily/archive_* hold earlier fits
 notes/                              # LOCAL ONLY: working documents, review plans, checklists, internal_2026-04/
 literature/                         # LOCAL ONLY: Zotero digests (see Literature section)
@@ -197,8 +197,12 @@ data/archive/                       # LOCAL ONLY: earlier releases and pipeline 
 Clean-up of 2026-10-18: nothing was deleted; superseded material was moved into `archive/`, `reviews/`,
 `reference/` and `data/archive/` (all gitignored) with a manifest. Root build artefacts that Quarto
 regenerates (`manuscript_files/`, `manuscript_v43_files/`, the two caches) stay where Quarto expects them.
-`manuscript_v43.qmd` is not in the `_quarto.yml` render list, so its outputs land in the repo root and
-are moved into `docs/` by hand after each render (its html output file is `manuscript_v43.html`).
+`manuscript_v43.qmd` (restructured candidate) is LOCAL ONLY since 2026-10-28: gitignored and not on
+GitHub or the Pages site until Thomas chooses between it and `manuscript.qmd`. It is not in the
+`_quarto.yml` render list, so its outputs land in the repo root; move them to `reviews/manuscript_v43/`
+(its html output file is `manuscript_v43.html`). Chunk code stays identical to `manuscript.qmd` outside
+the nine known chunks, so one set of fits serves both; the refit driver compares the two when the file
+is present and skips the comparison and the v43 render when it is absent (fresh clone).
 
 ## Data Pipeline
 

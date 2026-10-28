@@ -328,7 +328,7 @@ STAGES=(
   "daily_mm|285|3-5 GB|all_exist models/daily/m4_daily_mm_ls.rds|Rscript R/fit_daily_models.R mm|$DATA_STAGES"
   "daily_rest|555|2-3 GB|all_exist models/daily/m1_daily_ls.rds models/daily/m1_daily_ls_full.rds models/daily/m1_daily_ls_xfl.rds models/daily/m3_daily_ls_v4.rds|Rscript R/fit_daily_models.R rest|$DATA_STAGES"
   "sim_recovery|420|3-5 GB|sim_done|env SIM_REPS=20 SIM_ITER=8000 SIM_RENDER=1 Rscript R/sim_mm_recovery.R|"
-  "render_docx_v43|20|~6 GB|fresh $RENDER_V43_DONE -- $RENDER_IN|ls $LOO_FILES >/dev/null && rm -rf manuscript_v43_cache && quarto render manuscript_v43.qmd --to docx && touch $RENDER_V43_DONE|ALL"
+  "render_docx_v43|20|~6 GB|[ ! -e manuscript_v43.qmd ] || fresh $RENDER_V43_DONE -- $RENDER_IN|ls $LOO_FILES >/dev/null && rm -rf manuscript_v43_cache && quarto render manuscript_v43.qmd --to docx && touch $RENDER_V43_DONE|ALL"
   "render_docx|20|~6 GB|fresh $RENDER_DONE -- $RENDER_IN|ls $LOO_FILES >/dev/null && rm -rf manuscript_cache && quarto render manuscript.qmd --to docx && touch $RENDER_DONE|ALL"
 )
 field() { echo "$1" | cut -d'|' -f"$2"; }
@@ -717,7 +717,7 @@ preflight() {
   for c in Rscript quarto memory_pressure md5 pgrep pkill; do
     command -v "$c" >/dev/null || { progress "preflight: '$c' not on PATH"; ok=0; }
   done
-  for f in manuscript.qmd manuscript_v43.qmd R/01_preprocess.R R/02_impute_wemwbs.R \
+  for f in manuscript.qmd R/01_preprocess.R R/02_impute_wemwbs.R \
            R/03_prior_sensitivity.R R/04_daily_aggregate.R R/05_loo.R R/fit_main_models.R \
            R/fit_sensitivity_models.R R/fit_daily_models.R R/prep_primary_genre.R \
            R/sim_mm_recovery.R R/sim_mm_recovery_report.qmd \
@@ -735,7 +735,9 @@ preflight() {
   if ! Rscript -e 'for (f in c("R/fit_main_models.R","R/05_loo.R","R/01_preprocess.R","R/02_impute_wemwbs.R","R/03_prior_sensitivity.R","R/04_daily_aggregate.R","R/fit_daily_models.R","R/fit_sensitivity_models.R","R/prep_primary_genre.R","R/sim_mm_recovery.R")) invisible(parse(f))' >/dev/null 2>&1; then
     progress "preflight: an R script does not parse"; ok=0
   fi
-  if out=$(check_chunks); then
+  if [ ! -e manuscript_v43.qmd ]; then
+    progress "preflight: manuscript_v43.qmd not present (local-only candidate, not in git); chunk comparison skipped"
+  elif out=$(check_chunks); then
     progress "preflight: $out"
   else
     progress "preflight: manuscript.qmd and manuscript_v43.qmd no longer share their chunk code:"
@@ -850,7 +852,7 @@ FAILURES_REPORTED=0
 last_run_section() { awk '/^=== .* START /{buf=""} {buf = buf $0 "\n"} END {printf "%s", buf}' "$1"; }
 report_render() {
   local name=$1 log="${PREFIX}_$1.log" out=docs/manuscript.docx
-  [ "$name" = render_docx_v43 ] && out=manuscript_v43.docx  # not in the _quarto.yml render list: lands in the repo root; move to docs/ by hand
+  [ "$name" = render_docx_v43 ] && out=manuscript_v43.docx  # not in the _quarto.yml render list: lands in the repo root; local only (reviews/manuscript_v43/), not published
   if [ "$STAGE_RC" -eq 0 ]; then
     progress "$name: rendered $out without errors (no stale pins hit)"
   else

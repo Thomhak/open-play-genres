@@ -102,8 +102,6 @@ analysis_plan_daily.md
 
 # Co-author review copies with tracked changes/comments (docs/ is published to GitHub Pages)
 docs/manuscript_v*.docx
-# ...except the build output of manuscript_v43.qmd (co-author copies now live in reviews/)
-!docs/manuscript_v43.docx
 
 # Model-written literature digests derived from Zotero PDFs (local only)
 literature/
@@ -125,3 +123,9 @@ archive/
 reviews/
 reference/
 data/archive/
+
+# Restructured candidate manuscript: local only until Thomas chooses between it and
+# manuscript.qmd (2026-10-28). Its renders go to reviews/manuscript_v43/.
+manuscript_v43.qmd
+manuscript_v43.*
+docs/manuscript_v43.*
