@@ -9,7 +9,7 @@
 # ONE fit, computes loo(), saves it, and exits, so peak memory is one fit plus
 # its log-likelihood matrix (about 2-3 GB for M1/M2, 4-5 GB for M3/M4).
 #
-# Usage (from the repo root; normally called by scripts/refit_v126.sh):
+# Usage (from the repo root; normally called by scripts/refit_v130.sh):
 #   Rscript R/05_loo.R h1|h2_fe|h2_hier|h2_mm
 #
 # Contract with the manuscript chunk `loo-comparison`:
@@ -55,10 +55,10 @@ if (file.exists(out_path) && file.mtime(out_path) > file.mtime(fit_path)) {
 
 # Expected sample: waves with an observed SWEMWBS in the current analytic
 # sample (as in manuscript chunk model-data: n_analysis_obs, n_analysis_pids).
-survey  <- load_survey_data()
-exp_obs <- sum(!is.na(survey$wemwbs))
-exp_pid <- length(unique(survey$pid[!is.na(survey$wemwbs)]))
-revoked <- read.csv(here("data/reference/revoked_qualified_pids.csv"))$pid
+survey   <- load_survey_data()
+exp_obs  <- sum(!is.na(survey$wemwbs))
+exp_pids <- unique(survey$pid[!is.na(survey$wemwbs)])
+exp_pid  <- length(exp_pids)
 rm(survey)
 
 say("loading %s", basename(fit_path))
@@ -66,7 +66,8 @@ fit <- readRDS(fit_path)
 d   <- fit$data
 say("%s: %d obs, %d participants (expected %d / %d)", name, nrow(d),
     length(unique(d$pid)), exp_obs, exp_pid)
-if (nrow(d) != exp_obs || length(unique(d$pid)) != exp_pid || any(d$pid %in% revoked)) {
+if (nrow(d) != exp_obs || length(unique(d$pid)) != exp_pid ||
+    !setequal(unique(d$pid), exp_pids)) {
   stop(sprintf("%s was not fitted on the current analytic sample; refit it before LOO.",
                basename(fit_path)))
 }

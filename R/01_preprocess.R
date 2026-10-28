@@ -25,7 +25,7 @@
 #     wide, as the wide format is ambiguous with overlapping genre counts.
 #
 # The preregistered primary-genre attribution is produced from this
-# script's functions by R/prep_primary_genre.R and enters the registered
+# script's functions by R/prep_primary_genre.R and enters the preregistered
 # frequentist analyses in the manuscript's Appendix D (the frozen
 # R/01_preprocess_prereg.R uses an older taxonomy and is not used).
 #
@@ -38,20 +38,21 @@
 #   5. Computes total (unique, no double-counting) playtime per (pid, wave)
 #   6. Saves processed outputs to data/processed/
 #
-# DATA VERSION AND ANALYTIC SAMPLE (Open Play v1.2.6, Zenodo 22811439):
+# DATA VERSION AND ANALYTIC SAMPLE (Open Play v1.3.0, Zenodo 23419571):
 #   - Analytic participants = intake `qualified == TRUE` in
 #     data/clean/survey_intake.csv.gz AND at least one valid (complete-item)
-#     SWEMWBS in biweekly waves 1-6; see analytic_pids(). The v1.2.4 upstream
-#     fix revoked `qualified` for 306 intakes. load_survey_data() applies the
-#     filter, so every consumer that sources this file inherits it, and the
-#     processed telemetry outputs contain analytic participants only (waves
-#     are assigned only to pids with a baseline in the filtered survey).
-#   - Releases >= v1.2.5 dropped ideal_baseline_day from survey_biweekly.
+#     SWEMWBS in biweekly waves 1-6; see analytic_pids(). load_survey_data()
+#     applies the filter, so every consumer that sources this file inherits
+#     it, and the processed telemetry outputs contain analytic participants
+#     only (waves are assigned only to pids with a baseline in the filtered
+#     survey).
+#   - Releases >= v1.2.5 do not ship ideal_baseline_day in survey_biweekly.
 #     It is supplied by data/reference/baseline_days.csv (pid,
-#     ideal_baseline_day; one row per pid), written once by
-#     R/00_baseline_days.R from the v1.2.1 biweekly file. The values are
-#     identical to v1.2.1, so the outputs for retained participants are
-#     unchanged from the v1.2.1 pipeline.
+#     ideal_baseline_day; one row per pid), which R/00_baseline_days.R
+#     rebuilds from the same release's raw biweekly file
+#     (data/raw/survey_biweekly_raw.csv.gz) with the rule of the release's
+#     data-process.qmd; that script stops unless the result reproduces the
+#     clean survey_biweekly.csv.gz row for row. Run it once after `make data`.
 # =============================================================================
 
 library(here)
@@ -72,8 +73,8 @@ WAVE_LENGTH_DAYS <- 14L
 N_WAVES <- 6L
 # +14 day shift so wave W covers the 14 days *ending* on the wave W survey date
 WAVE_SHIFT_DAYS <- 14L
-# Per-participant baseline day (dropped upstream in v1.2.5); written by
-# R/00_baseline_days.R from Open Play v1.2.1.
+# Per-participant baseline day (not shipped since v1.2.5); rebuilt by
+# R/00_baseline_days.R from the release's raw biweekly file.
 BASELINE_DAYS_PATH <- "data/reference/baseline_days.csv"
 
 # =============================================================================
@@ -99,17 +100,12 @@ qualified_pids <- function(clean_dir = "data/clean") {
 #' (all seven items present) in biweekly waves 1-N_WAVES.
 #' This is the single sample definition used by every script and the
 #' manuscript (biweekly and daily analyses alike).
-#' The arguments exist only for the earlier-sample comparison of Deviation D7
-#' (Appendix D): analytic_pids("data/clean_v121", require_qualified = FALSE)
-#' returns the v1.2.1 sample (anyone with a valid SWEMWBS). The defaults give
-#' the analytic sample.
 #' @param clean_dir Folder of the clean release files (default: data/clean)
-#' @param require_qualified Keep only qualified intakes (default TRUE)
 #' @return Character vector of pids
-analytic_pids <- function(clean_dir = "data/clean", require_qualified = TRUE) {
-  keep <- if (require_qualified) qualified_pids(clean_dir) else NULL
+analytic_pids <- function(clean_dir = "data/clean") {
+  keep <- qualified_pids(clean_dir)
   read_csv(here(clean_dir, "survey_biweekly.csv.gz"), show_col_types = FALSE) |>
-    filter(wave >= 1, wave <= N_WAVES, !require_qualified | pid %in% keep) |>
+    filter(wave >= 1, wave <= N_WAVES, pid %in% keep) |>
     mutate(wemwbs = rowMeans(across(starts_with("wemwbs_")), na.rm = FALSE)) |>
     filter(!is.na(wemwbs)) |>
     distinct(pid) |>
@@ -310,8 +306,7 @@ populate_xbox_genres <- function(meta) {
 #'      "Strategy" → one row, so session counts are not inflated).
 #'   5. Count n_genres_valid: distinct genres remaining after collapsing.
 #'
-#' @param clean_dir Folder of the clean release files (default: data/clean;
-#'   "data/clean_v121" only for the earlier-sample files, R/prep_v121_sample.R)
+#' @param clean_dir Folder of the clean release files (default: data/clean)
 #' @return tibble: original_name, platform, genre, n_genres_valid
 load_game_metadata_long <- function(clean_dir = "data/clean") {
   meta <- read_csv(
@@ -424,13 +419,13 @@ load_genre_sessions <- function(meta_long, clean_dir = "data/clean") {
 #' Rows are restricted to `pids` (default: analytic_pids(), i.e. qualified at
 #' intake with at least one valid SWEMWBS). The baseline day comes from the
 #' sidecar data/reference/baseline_days.csv, because Open Play >= v1.2.5 no
-#' longer ships ideal_baseline_day; any baseline columns still present in the
-#' file (v1.2.1) are dropped before the join.
+#' longer ships ideal_baseline_day; baseline columns in the file itself (only
+#' releases before v1.2.5 carry them) are dropped before the join.
 #' @param pids Character vector of participant ids to keep
 #' @param clean_dir Folder of the clean release files (default: data/clean)
 #' @param baseline_days Baseline-day table (pid, ideal_baseline_day); default
 #'   the sidecar. NULL uses the file's own ideal_baseline_day column instead
-#'   (v1.2.1 files only; used for the earlier-sample comparison, D7).
+#'   (only releases before v1.2.5 have one; no current caller uses this).
 load_survey_data <- function(pids = analytic_pids(), clean_dir = "data/clean",
                              baseline_days = load_baseline_days()) {
   raw <- read_csv(here(clean_dir, "survey_biweekly.csv.gz"), show_col_types = FALSE) |>

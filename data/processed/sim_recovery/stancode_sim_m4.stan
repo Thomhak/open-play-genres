@@ -1,5 +1,19 @@
 // generated with brms 2.23.0
 functions {
+  /* integer sequence of values
+   * Args:
+   *   start: starting integer
+   *   end: ending integer
+   * Returns:
+   *   an integer sequence from start to end
+   */
+  array[] int sequence(int start, int end) {
+    array[end - start + 1] int seq;
+    for (n in 1:num_elements(seq)) {
+      seq[n] = n + start - 1;
+    }
+    return seq;
+  }
  /* compute correlated group-level effects
   * Args:
   *   z: matrix of unscaled group-level effects
@@ -13,6 +27,21 @@ functions {
     return transpose(diag_pre_multiply(SD, L) * z);
   }
 
+  // compute partial sums of the log-likelihood
+  real partial_log_lik_lpmf(array[] int seq, int start, int end, data vector Y, data matrix Xc, vector b, real Intercept, real sigma, data array[] int J_1_1, data array[] real W_1_1, data array[] int J_1_2, data array[] real W_1_2, data array[] int J_1_3, data array[] real W_1_3, data array[] int J_1_4, data array[] real W_1_4, data array[] int J_1_5, data array[] real W_1_5, data array[] int J_1_6, data array[] real W_1_6, data array[] int J_1_7, data array[] real W_1_7, data array[] int J_1_8, data array[] real W_1_8, data array[] int J_1_9, data array[] real W_1_9, data array[] int J_1_10, data array[] real W_1_10, data array[] int J_1_11, data array[] real W_1_11, data array[] int J_1_12, data array[] real W_1_12, data array[] int J_1_13, data array[] real W_1_13, data array[] int J_1_14, data array[] real W_1_14, data vector Z_1_1_1, data vector Z_1_1_2, data vector Z_1_1_3, data vector Z_1_1_4, data vector Z_1_1_5, data vector Z_1_1_6, data vector Z_1_1_7, data vector Z_1_1_8, data vector Z_1_1_9, data vector Z_1_1_10, data vector Z_1_1_11, data vector Z_1_1_12, data vector Z_1_1_13, data vector Z_1_1_14, data vector Z_1_2_1, data vector Z_1_2_2, data vector Z_1_2_3, data vector Z_1_2_4, data vector Z_1_2_5, data vector Z_1_2_6, data vector Z_1_2_7, data vector Z_1_2_8, data vector Z_1_2_9, data vector Z_1_2_10, data vector Z_1_2_11, data vector Z_1_2_12, data vector Z_1_2_13, data vector Z_1_2_14, vector r_1_1, vector r_1_2, data array[] int J_2, data vector Z_2_1, data vector Z_2_2, vector r_2_1, vector r_2_2) {
+    real ptarget = 0;
+    int N = end - start + 1;
+    // initialize linear predictor term
+    vector[N] mu = rep_vector(0.0, N);
+    mu += Intercept;
+    for (n in 1:N) {
+      // add more terms to the linear predictor
+      int nn = n + start - 1;
+      mu[n] += W_1_1[nn] * r_1_1[J_1_1[nn]] * Z_1_1_1[nn] + W_1_2[nn] * r_1_1[J_1_2[nn]] * Z_1_1_2[nn] + W_1_3[nn] * r_1_1[J_1_3[nn]] * Z_1_1_3[nn] + W_1_4[nn] * r_1_1[J_1_4[nn]] * Z_1_1_4[nn] + W_1_5[nn] * r_1_1[J_1_5[nn]] * Z_1_1_5[nn] + W_1_6[nn] * r_1_1[J_1_6[nn]] * Z_1_1_6[nn] + W_1_7[nn] * r_1_1[J_1_7[nn]] * Z_1_1_7[nn] + W_1_8[nn] * r_1_1[J_1_8[nn]] * Z_1_1_8[nn] + W_1_9[nn] * r_1_1[J_1_9[nn]] * Z_1_1_9[nn] + W_1_10[nn] * r_1_1[J_1_10[nn]] * Z_1_1_10[nn] + W_1_11[nn] * r_1_1[J_1_11[nn]] * Z_1_1_11[nn] + W_1_12[nn] * r_1_1[J_1_12[nn]] * Z_1_1_12[nn] + W_1_13[nn] * r_1_1[J_1_13[nn]] * Z_1_1_13[nn] + W_1_14[nn] * r_1_1[J_1_14[nn]] * Z_1_1_14[nn] + W_1_1[nn] * r_1_2[J_1_1[nn]] * Z_1_2_1[nn] + W_1_2[nn] * r_1_2[J_1_2[nn]] * Z_1_2_2[nn] + W_1_3[nn] * r_1_2[J_1_3[nn]] * Z_1_2_3[nn] + W_1_4[nn] * r_1_2[J_1_4[nn]] * Z_1_2_4[nn] + W_1_5[nn] * r_1_2[J_1_5[nn]] * Z_1_2_5[nn] + W_1_6[nn] * r_1_2[J_1_6[nn]] * Z_1_2_6[nn] + W_1_7[nn] * r_1_2[J_1_7[nn]] * Z_1_2_7[nn] + W_1_8[nn] * r_1_2[J_1_8[nn]] * Z_1_2_8[nn] + W_1_9[nn] * r_1_2[J_1_9[nn]] * Z_1_2_9[nn] + W_1_10[nn] * r_1_2[J_1_10[nn]] * Z_1_2_10[nn] + W_1_11[nn] * r_1_2[J_1_11[nn]] * Z_1_2_11[nn] + W_1_12[nn] * r_1_2[J_1_12[nn]] * Z_1_2_12[nn] + W_1_13[nn] * r_1_2[J_1_13[nn]] * Z_1_2_13[nn] + W_1_14[nn] * r_1_2[J_1_14[nn]] * Z_1_2_14[nn] + r_2_1[J_2[nn]] * Z_2_1[nn] + r_2_2[J_2[nn]] * Z_2_2[nn];
+    }
+    ptarget += normal_id_glm_lpdf(Y[start:end] | Xc[start:end], mu, b, sigma);
+    return ptarget;
+  }
 }
 data {
   int<lower=1> N;  // total number of observations
@@ -20,6 +49,7 @@ data {
   int<lower=1> K;  // number of population-level effects
   matrix[N, K] X;  // population-level design matrix
   int<lower=1> Kc;  // number of population-level effects after centering
+  int grainsize;  // grainsize for threading
   // data for group-level effects of ID 1
   int<lower=1> N_1;  // number of grouping levels
   int<lower=1> M_1;  // number of coefficients per level
@@ -94,6 +124,7 @@ data {
 transformed data {
   matrix[N, Kc] Xc;  // centered version of X without an intercept
   vector[Kc] means_X;  // column means of X before centering
+  array[N] int seq = sequence(1, N);
   for (i in 2:K) {
     means_X[i - 1] = mean(X[, i]);
     Xc[, i - 1] = X[, i] - means_X[i - 1];
@@ -142,14 +173,7 @@ transformed parameters {
 model {
   // likelihood including constants
   if (!prior_only) {
-    // initialize linear predictor term
-    vector[N] mu = rep_vector(0.0, N);
-    mu += Intercept;
-    for (n in 1:N) {
-      // add more terms to the linear predictor
-      mu[n] += W_1_1[n] * r_1_1[J_1_1[n]] * Z_1_1_1[n] + W_1_2[n] * r_1_1[J_1_2[n]] * Z_1_1_2[n] + W_1_3[n] * r_1_1[J_1_3[n]] * Z_1_1_3[n] + W_1_4[n] * r_1_1[J_1_4[n]] * Z_1_1_4[n] + W_1_5[n] * r_1_1[J_1_5[n]] * Z_1_1_5[n] + W_1_6[n] * r_1_1[J_1_6[n]] * Z_1_1_6[n] + W_1_7[n] * r_1_1[J_1_7[n]] * Z_1_1_7[n] + W_1_8[n] * r_1_1[J_1_8[n]] * Z_1_1_8[n] + W_1_9[n] * r_1_1[J_1_9[n]] * Z_1_1_9[n] + W_1_10[n] * r_1_1[J_1_10[n]] * Z_1_1_10[n] + W_1_11[n] * r_1_1[J_1_11[n]] * Z_1_1_11[n] + W_1_12[n] * r_1_1[J_1_12[n]] * Z_1_1_12[n] + W_1_13[n] * r_1_1[J_1_13[n]] * Z_1_1_13[n] + W_1_14[n] * r_1_1[J_1_14[n]] * Z_1_1_14[n] + W_1_1[n] * r_1_2[J_1_1[n]] * Z_1_2_1[n] + W_1_2[n] * r_1_2[J_1_2[n]] * Z_1_2_2[n] + W_1_3[n] * r_1_2[J_1_3[n]] * Z_1_2_3[n] + W_1_4[n] * r_1_2[J_1_4[n]] * Z_1_2_4[n] + W_1_5[n] * r_1_2[J_1_5[n]] * Z_1_2_5[n] + W_1_6[n] * r_1_2[J_1_6[n]] * Z_1_2_6[n] + W_1_7[n] * r_1_2[J_1_7[n]] * Z_1_2_7[n] + W_1_8[n] * r_1_2[J_1_8[n]] * Z_1_2_8[n] + W_1_9[n] * r_1_2[J_1_9[n]] * Z_1_2_9[n] + W_1_10[n] * r_1_2[J_1_10[n]] * Z_1_2_10[n] + W_1_11[n] * r_1_2[J_1_11[n]] * Z_1_2_11[n] + W_1_12[n] * r_1_2[J_1_12[n]] * Z_1_2_12[n] + W_1_13[n] * r_1_2[J_1_13[n]] * Z_1_2_13[n] + W_1_14[n] * r_1_2[J_1_14[n]] * Z_1_2_14[n] + r_2_1[J_2[n]] * Z_2_1[n] + r_2_2[J_2[n]] * Z_2_2[n];
-    }
-    target += normal_id_glm_lpdf(Y | Xc, mu, b, sigma);
+    target += reduce_sum(partial_log_lik_lpmf, seq, grainsize, Y, Xc, b, Intercept, sigma, J_1_1, W_1_1, J_1_2, W_1_2, J_1_3, W_1_3, J_1_4, W_1_4, J_1_5, W_1_5, J_1_6, W_1_6, J_1_7, W_1_7, J_1_8, W_1_8, J_1_9, W_1_9, J_1_10, W_1_10, J_1_11, W_1_11, J_1_12, W_1_12, J_1_13, W_1_13, J_1_14, W_1_14, Z_1_1_1, Z_1_1_2, Z_1_1_3, Z_1_1_4, Z_1_1_5, Z_1_1_6, Z_1_1_7, Z_1_1_8, Z_1_1_9, Z_1_1_10, Z_1_1_11, Z_1_1_12, Z_1_1_13, Z_1_1_14, Z_1_2_1, Z_1_2_2, Z_1_2_3, Z_1_2_4, Z_1_2_5, Z_1_2_6, Z_1_2_7, Z_1_2_8, Z_1_2_9, Z_1_2_10, Z_1_2_11, Z_1_2_12, Z_1_2_13, Z_1_2_14, r_1_1, r_1_2, J_2, Z_2_1, Z_2_2, r_2_1, r_2_2);
   }
   // priors including constants
   target += lprior;

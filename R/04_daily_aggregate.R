@@ -60,7 +60,7 @@
 # Prespecification note: this script computes marginal distributions only. It
 # deliberately does NOT cross any exposure with any wellbeing outcome.
 #
-# Sample (Open Play v1.2.6): the diary is restricted to analytic_pids() from
+# Sample (Open Play v1.3.0): the diary is restricted to analytic_pids() from
 # R/01_preprocess.R (intake qualified == TRUE AND >= 1 valid SWEMWBS in
 # biweekly waves 1-6), the same participants as the biweekly analyses. The
 # filter is applied once, in load_daily_survey(), so every daily consumer
@@ -935,12 +935,15 @@ daily_aggregate <- function() {
     100 * sum(offsets$n_viol, na.rm = TRUE) / sum(offsets$n_resp, na.rm = TRUE)
   ))
   viol_share <- sum(offsets$n_viol, na.rm = TRUE) / sum(offsets$n_resp, na.rm = TRUE)
-  # Band recalibrated for the v1.2.6 analytic sample: the old 5-8% band was
-  # set on the unrestricted v1.2.1 diary (6.48%). Restricting to analytic_pids()
-  # gives 3.98% in v1.2.6 and 3.95% on the v1.2.1 diary for the same pids, so
-  # the drop is sample composition (participants whose `qualified` flag was
-  # revoked upstream answered outside the availability window far more often),
-  # not a change in the timezone conversion.
+  # Band recalibrated on 2026-10-13 for the v1.2.6 analytic sample: the old
+  # 5-8% band was set on the unrestricted v1.2.1 diary (6.48%). Restricting to
+  # analytic_pids() gave 3.98% in v1.2.6 and 3.95% on the v1.2.1 diary for the
+  # same pids, so the drop was sample composition (participants whose
+  # `qualified` flag was revoked upstream in v1.2.4 answered outside the
+  # availability window far more often), not a change in the timezone
+  # conversion. v1.3.0 restored 79 of those flags; its analytic diary gives
+  # 4.68% (693 of 14,814 responses with a reported timezone), inside the band
+  # but close to its upper end.
   stopifnot("availability violations outside expected band (3-5%)" =
               viol_share > 0.03 & viol_share < 0.05)
 

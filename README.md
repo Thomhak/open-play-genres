@@ -27,41 +27,40 @@ The best entry point is the rendered manuscript linked above. Key repository com
 
 ## Data
 
-Gameplay telemetry and survey data are from the **Open Play** longitudinal dataset (v1.2.6), available on Zenodo:
+Gameplay telemetry and survey data are from the **Open Play** longitudinal dataset (release v1.3.0), available on Zenodo:
 
-> Ballou, N., et al. (2025). *Open Play: A longitudinal dataset of video game play and psychological wellbeing*. Zenodo. https://doi.org/10.5281/zenodo.22811439 (record https://zenodo.org/records/22811439)
+> Ballou, N., et al. (2025). *Open Play: A longitudinal dataset of video game play and psychological wellbeing*. Zenodo. https://doi.org/10.5281/zenodo.23419571 (release v1.3.0, record https://zenodo.org/records/23419571)
 
 The dataset covers multi-platform gaming telemetry (Nintendo Switch, Xbox, Steam, iOS, Android) and biweekly wellbeing surveys. Data files are not stored in this repository; run `make data` to download them into `data/clean/`. See the [Open Play repository](https://github.com/digital-wellbeing/open-play) for full documentation of the data cleaning pipeline.
 
-The analytic sample is restricted to participants whose intake record is flagged `qualified` in v1.2.6 and who have at least one valid SWEMWBS (`analytic_pids()` in `R/01_preprocess.R`; manuscript Appendix A, Deviation D7). Releases from v1.2.5 on no longer contain the per-participant `ideal_baseline_day` used to assign telemetry to waves, so `R/00_baseline_days.R` writes it once from the v1.2.1 release (record 20119134) to `data/reference/baseline_days.csv`; `R/00_revoked_pids.R` compares the v1.2.1 and v1.2.6 intake files and writes the participant lists in `data/reference/` (tracked in git) that the manuscript uses to report the sample correction. Both scripts read the v1.2.1 clean files from `data/clean_v121/`; `R/00_baseline_days.R` downloads the v1.2.1 release if that folder is absent.
+The analytic sample comprises the participants whose intake record is flagged `qualified` and who have at least one valid SWEMWBS in waves 1–6 (`analytic_pids()` in `R/01_preprocess.R`). Release v1.3.0 corrected the participant identifiers and qualification flags of earlier releases. Releases from v1.2.5 on no longer contain the per-participant `ideal_baseline_day` used to assign telemetry to waves, so `R/00_baseline_days.R` rebuilds it from the release's raw biweekly survey file (`data/raw/survey_biweekly_raw.csv.gz`, extracted by `make data`) with the rule of the Open Play cleaning pipeline, and writes it to `data/reference/baseline_days.csv` (tracked in git). The script stops unless the rebuilt baseline days reproduce the clean biweekly file row for row.
 
 ## Reproducing the analysis
 
-**Requirements:** R ≥ 4.5, [renv](https://rstudio.github.io/renv/), [Quarto](https://quarto.org), `wget`, `unzip`
+**Requirements:** R ≥ 4.5, [renv](https://rstudio.github.io/renv/), [Quarto](https://quarto.org), `curl`, `unzip`
 
 ```bash
-# 1. Download Open Play v1.2.6 data from Zenodo (~197MB)
+# 1. Download Open Play v1.3.0 data from Zenodo (~200MB)
 make data
-Rscript R/00_baseline_days.R          # baseline-day sidecar from v1.2.1 (downloads v1.2.1 if data/clean_v121/ is absent)
+Rscript R/00_baseline_days.R          # baseline-day sidecar, rebuilt from the release's raw biweekly file
 
 # 2. Install R dependencies
 Rscript -e "renv::restore()"
 
 # 3. Run preprocessing pipeline
 Rscript R/01_preprocess.R
-Rscript R/prep_primary_genre.R        # primary-genre attribution (registered rule) for the Appendix D frequentist table
-Rscript R/prep_v121_sample.R          # earlier-sample (v1.2.1, Deviation D7) playtime in data/processed_v121/ for the same table (downloads v1.2.1 into data/clean_v121/ if needed; checks, never overwrites, existing files)
+Rscript R/prep_primary_genre.R        # primary-genre attribution (preregistered rule) for the Appendix D frequentist table
 
 # 4. Run the multiple imputation (cached; ~20 min)
 Rscript R/02_impute_wemwbs.R
 
 # 5. Fit the models that the manuscript loads from cache rather than fitting itself
 Rscript R/04_daily_aggregate.R        # daily-diary exposure frame (exploratory analysis)
-Rscript R/fit_daily_models.R bridge   # daily SESOI transfer + biweekly life-satisfaction comparison
 Rscript R/fit_daily_models.R rest     # M1-D, M3-D and the M1-D sensitivity refits
 Rscript R/fit_daily_models.R m2       # M2-D
 Rscript R/fit_daily_models.R mm       # M4-D (multi-membership; longest)
 Rscript R/fit_daily_models.R dyn      # AR(1) and window-length sensitivities
+Rscript R/fit_daily_models.R bridge   # biweekly life-satisfaction comparison (not used by the manuscript; run last)
 Rscript R/fit_sensitivity_models.R    # demographic sensitivity models (optional; the render fits them if missing)
 
 # 6. Render manuscript (HTML + PDF + DOCX → docs/ for GitHub Pages)
@@ -70,7 +69,9 @@ quarto render manuscript.qmd --to preprint-typst
 quarto render manuscript.qmd --to docx
 ```
 
-**Note on first run:** The manuscript fits the four registered-analysis Bayesian models (M1–M4) via `brms` on first render, which takes roughly **24+ hours** depending on hardware; the daily-timescale and sensitivity models in step 5 are fit outside the render and add a similar amount. Fitted models are cached as `.rds` files in `models/`, and the multiple imputation is cached in `data/processed/imputation/` (neither tracked by git; the manuscript regenerates the imputation automatically if the cache is missing). Subsequent renders load the cached fits and complete in minutes. Each render loads all fits into memory (several GB), so render one format at a time rather than the bare `quarto render manuscript.qmd`. Delete `models/` to refit everything from scratch.
+Steps 4 and 5, the four main models (M1–M4, fitted from the manuscript's own chunks by `R/fit_main_models.R`), the LOO comparison (`R/05_loo.R`), the M4 recovery simulation and the Word renders are also run in one resumable, memory-guarded driver: `scripts/refit_v130.sh` (`REFIT_DRYRUN=1 bash scripts/refit_v130.sh` prints the plan and timetable without changing anything).
+
+**Note on first run:** The manuscript fits the four main Bayesian models (M1–M4) via `brms` on first render, which takes roughly **24+ hours** depending on hardware; the daily-timescale and sensitivity models in step 5 are fit outside the render and add a similar amount. Fitted models are cached as `.rds` files in `models/`, and the multiple imputation is cached in `data/processed/imputation/` (neither tracked by git; the manuscript regenerates the imputation automatically if the cache is missing). Subsequent renders load the cached fits and complete in minutes. Each render loads all fits into memory (several GB), so render one format at a time rather than the bare `quarto render manuscript.qmd`. Delete `models/` to refit everything from scratch.
 
 ## Repository structure
 
@@ -83,18 +84,24 @@ Makefile                        Downloads data from Zenodo
 renv.lock                       R dependency lockfile
 docs/                           Published site (manuscript HTML, PDF, DOCX)
 R/
+  00_baseline_days.R            Rebuilds the per-participant baseline day from the release's raw biweekly file
   01_preprocess.R               Preprocessing pipeline (multi-genre full attribution)
   02_impute_wemwbs.R            Two-level MICE imputation of SWEMWBS on the person x wave grid
   03_prior_sensitivity.R        Superseded (2026-10-13): all models use brms default priors; not run
   04_daily_aggregate.R          Daily diary exposure pipeline (same-day windows; exploratory analysis)
+  05_loo.R                      Precomputes the LOO comparison of M1-M4 (models/loo_*.rds)
+  fit_main_models.R             Fits M1-M4 by evaluating the manuscript's own chunks outside the render
+  prep_primary_genre.R          Primary-genre attribution (preregistered rule) for the Appendix D table
   fit_daily_models.R            Fits the exploratory daily models (caches to models/daily/)
   fit_sensitivity_models.R      Fits the demographic sensitivity models (caches to models/)
   helpers.R                     Table formatting utilities
-  sim_mm_recovery.R             Supplementary: M4 parameter-recovery engine (fits the manuscript's own M4 chunks to simulated data; SIM_REPS, SIM_ITER)
+  sim_mm_recovery.R             Supplementary: M4 parameter-recovery engine (fits the manuscript's own M4 chunks to simulated data; SIM_REPS, SIM_ITER, SIM_REP_RANGE)
   sim_mm_recovery_report.qmd    Supplementary: recovery report (reads data/processed/sim_recovery/, never fits)
-  sim_mm_recovery_report.html   Rendered recovery report (2026-10-14, 20 replications, 8,000 iterations)
+  sim_mm_recovery_report.html   Rendered recovery report (20 replications, 8,000 iterations)
   model_comparison_report.html  Rendered supplementary model comparison (LOO)
 apa.csl                         APA citation style
+scripts/
+  refit_v130.sh                 Resumable driver: imputation, all fits, LOO, recovery simulation, docx renders
 ensure-nojekyll.sh              Post-render hook keeping the GitHub Pages marker in docs/
 _extensions/                    Quarto typst preprint extension (mvuorre/preprint)
 ```

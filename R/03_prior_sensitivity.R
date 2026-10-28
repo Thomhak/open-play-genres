@@ -2,7 +2,8 @@
 # SUPERSEDED 2026-10-13: every brms model now uses the brms default priors
 # (following co-author review: defaults are fine, no prior-robustness check
 # unless preregistered), and the prior-sensitivity analysis has been dropped
-# from the manuscript (Appendix D) and from scripts/refit_v126.sh. The script
+# from the manuscript (Appendix D) and from the refit driver (then
+# scripts/refit_v126.sh, now scripts/refit_v130.sh). The script
 # below is kept for the record only; it encodes the old hyperpriors
 # (tau ~ Half-Normal(0, s), sigma_s ~ Normal(0, s)) and must not be run.
 # =============================================================================
@@ -29,14 +30,17 @@ stop("superseded 2026-10-13: priors are brms defaults; no prior-sensitivity anal
 # data/processed/prior_sensitivity_summary.rds for later inclusion in the
 # manuscript (see notes/TODO.md).
 #
-# DATA VERSION: these fits must be regenerated for Open Play v1.2.6 and the
-# qualified-only analytic sample (analytic_pids() in R/01_preprocess.R,
+# DATA VERSION (historical note of 2026-10-13, written for the move to Open
+# Play v1.2.6; the script is superseded and was not refitted for v1.2.6 or
+# v1.3.0): the fits would have to be regenerated for the current release and
+# the qualified-only analytic sample (analytic_pids() in R/01_preprocess.R,
 # applied by load_survey_data()). The brms `file =` targets for M4
 # (models/prior_sens_m4_*) are unchanged; the M3 targets were renamed to
 # models/prior_sens_m3mu_tau* on 2026-10-13, when M3's centres became estimated
 # parameters (the old models/prior_sens_m3_tau* fits are zero-centred). The
-# v1.2.1 fits are archived to models/archive_v121/ by scripts/refit_v126.sh,
-# and the v1.2.1 summary to data/processed_v121/prior_sensitivity_summary.rds.
+# v1.2.1 fits were archived to models/archive_v121/ by the v1.2.6 refit driver
+# (scripts/refit_v126.sh, since renamed scripts/refit_v130.sh), and the v1.2.1
+# summary to data/archive/processed_v121/prior_sensitivity_summary.rds.
 # =============================================================================
 
 library(here)

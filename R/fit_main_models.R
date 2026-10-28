@@ -14,7 +14,7 @@
 # h2-hier-fit also builds the gW_/gB_ genre-label columns and summed
 # exposures it needs, so DEP_LABELS is unchanged.
 #
-# Usage (from the repo root; normally called by scripts/refit_v126.sh):
+# Usage (from the repo root; normally called by scripts/refit_v130.sh):
 #   Rscript R/fit_main_models.R [last-label]      # default: h2-mm-fit
 #
 # Environment switches:
@@ -38,8 +38,9 @@
 #                         dependency or fit chunk); for testing only.
 #
 # After every fit chunk the fitted data are checked against the current
-# analytic sample (n observations, n participants, no revoked participant), so
-# a stale v1.2.1 fit reloaded through `file =` fails loudly.
+# analytic sample (n observations, n participants, the same participant set),
+# so a stale fit from an earlier data release reloaded through `file =` fails
+# loudly.
 # =============================================================================
 
 suppressPackageStartupMessages(library(here))
@@ -169,8 +170,6 @@ if (length(dep_hits)) {
 
 # --- Evaluate ----------------------------------------------------------------
 options(device = function(...) grDevices::pdf(file = NULL))  # no Rplots.pdf
-revoked <- read.csv(here("data/reference/revoked_qualified_pids.csv"))$pid
-stopifnot(length(revoked) > 0)
 nonfatal <- character(0)
 
 hash_obj <- function(x) if (requireNamespace("rlang", quietly = TRUE)) rlang::hash(x) else NA
@@ -183,7 +182,6 @@ report_frames <- function() {
   say("DRYRUN fit frame (wemwbs observed): %d rows; %d participants; n_analysis_obs=%d, n_analysis_pids=%d",
       nrow(fit), length(unique(fit$pid)),
       get("n_analysis_obs", envir = globalenv()), get("n_analysis_pids", envir = globalenv()))
-  say("DRYRUN revoked participants in fit frame: %d", sum(fit$pid %in% revoked))
   if (exists("mm_data", envir = globalenv())) {
     mm <- get("mm_data", envir = globalenv())
     say("DRYRUN mm_data: %d rows x %d cols; fit rows %d; K=%d genres; uniform-weight waves %d",
@@ -210,7 +208,7 @@ check_fit <- function(label) {
   say("%s: %d obs, %d participants, %d divergent transitions, chain seconds %s",
       obj, nrow(d), length(unique(d$pid)), divs, paste(round(et), collapse = "/"))
   if (!(nrow(d) == n_obs && length(unique(d$pid)) == n_pids &&
-        setequal(unique(d$pid), pids) && !any(d$pid %in% revoked))) {
+        setequal(unique(d$pid), pids))) {
     stop(sprintf(paste0(
       "%s does not match the current analytic sample (fit: %d obs / %d pids; ",
       "expected %d / %d). A stale fit was probably reloaded through brms `file =`: ",

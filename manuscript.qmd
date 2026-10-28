@@ -87,10 +87,10 @@ affiliations:
     department: Dyson School of Design Engineering
 
 abstract: |
-  Video game research often treats games as a monolithic category, and single-game or single-platform studies leave open whether findings generalise across the medium. In this Registered Report, we used digital trace data from the Open Play dataset to test whether (H1) total playtime is meaningfully associated with mental wellbeing and (H2) this association differs by game genre. The data comprise 226,000 hours of playtime across 4,152 games from Nintendo, Xbox, and Steam for 1,608 UK and US adults, linked to genre metadata and 6,293 biweekly wellbeing assessments (SWEMWBS). Judged against a preregistered threshold for practical significance, neither within-person fluctuations nor habitual differences in total playtime were meaningfully linked to wellbeing. The preregistered joint test found within-person differences between genres under our multi-genre attribution but not under the preregistered single-genre attribution, and no between-person differences. Under an exploratory hierarchical model, the estimated spread of the within-person genre effects implied that fewer than one of the 14 genres was expected to lie more than 0.06 points per hour from the average genre effect, and a multi-membership model estimated the spread less precisely. An exploratory daily-timescale analysis gave the same picture for total playtime and the hierarchical model's genre spread. Genre differences appear to be the wrong place to look for gaming's wellbeing effects, as genre labels are too coarse a proxy for the psychological experiences that plausibly drive them. We therefore regard finer-grained characterisations of play as the more promising avenue for further study.
+  Video game research often treats games as a monolithic category, and single-game or single-platform studies leave open whether findings generalise across the medium. In this Registered Report, we used digital trace data from the Open Play dataset to test whether (H1) total playtime is meaningfully associated with mental wellbeing and (H2) this association differs by game genre. The data comprise 222,000 hours of playtime across 4,128 games from Nintendo, Xbox, and Steam for 1,668 UK and US adults, linked to genre metadata and 6,518 biweekly wellbeing assessments (SWEMWBS). Judged against a preregistered threshold for practical significance, neither within-person fluctuations nor habitual differences in total playtime were meaningfully linked to wellbeing. The preregistered joint test found within-person differences between genres under our multi-genre attribution but not under the preregistered single-genre attribution, and no between-person differences. Under an exploratory hierarchical model, the estimated spread of the within-person genre effects implied that fewer than one of the 14 genres was expected to lie more than 0.06 points per hour from the average genre effect, and a multi-membership model estimated the spread less precisely. An exploratory daily-timescale analysis gave the same picture for total playtime and the hierarchical model's genre spread. Genre differences appear to be the wrong place to look for gaming's wellbeing effects, as genre labels are too coarse a proxy for the psychological experiences that plausibly drive them. We therefore regard finer-grained characterisations of play as the more promising avenue for further study.
 categories: [video games, wellbeing, genres, digital trace data, Registered Report]
 authornote: |
-  This study was preregistered as part of a Stage 1 Programmatic Registered Report; preregistration materials are available at <https://osf.io/mvngt/>. The Open Play dataset (v1.2.6) is openly available on Zenodo at <https://zenodo.org/records/22811439>. All analysis code, including the multi-membership model validation simulation, is available at <https://github.com/Thomhak/open-play-genres>.
+  This study was preregistered as part of a Stage 1 Programmatic Registered Report; preregistration materials are available at <https://osf.io/mvngt/>. The Open Play dataset (v1.3.0) is openly available on Zenodo at <https://zenodo.org/records/23419571>. All analysis code, including the multi-membership model validation simulation, is available at <https://github.com/Thomhak/open-play-genres>.
 date: last-modified
 fig-cap-location: bottom
 tbl-cap-location: bottom
@@ -192,6 +192,20 @@ source(here("R/01_preprocess.R"))  # pipeline functions used by Methods chunks
 set.seed(8675309)
 options(scipen = 999)
 
+# Stan backend (since 2026-10-17): CmdStan through cmdstanr, with within-chain
+# parallelisation (brms threading via reduce_sum; 3 threads x 4 chains = the 12
+# cores of the analysis machine). This changes computation time only, not the
+# models, priors or sampler settings. The AR(1) daily refit is the one fit made
+# without threads, because brms does not support threading for ARMA terms
+# (R/fit_daily_models.R). Install cmdstanr from https://stan-dev.r-universe.dev
+# and CmdStan with cmdstanr::install_cmdstan().
+stopifnot(
+  "cmdstanr is required: install.packages('cmdstanr', repos = 'https://stan-dev.r-universe.dev')" =
+    requireNamespace("cmdstanr", quietly = TRUE)
+)
+options(brms.backend = "cmdstanr", brms.threads = brms::threading(3))
+txt_cmdstan_version <- as.character(cmdstanr::cmdstan_version())
+
 print_num <- function(num, accuracy = 0.1) {
   scales::number(num, accuracy = accuracy, scale_cut = scales::cut_long_scale())
 }
@@ -258,7 +272,7 @@ intake_range_sentence <- glue(
 
 ## Data Source and Participants
 
-The analyses reported here are part of a Stage 1 Registered Report [@ballou2024psychological], and the data collected for this study are part of the Open Play dataset [@ballou2025openplay, {v1.2.6}], a longitudinal dataset that combined multi-platform video game digital trace data with daily and biweekly psychological measures from adult gamers in the UK and US over a three-month period. Qualifying participants completed the intake survey between `r intake_range_sentence`. The digital trace data span the following periods: `r telemetry_range_sentence`.
+The analyses reported here are part of a Stage 1 Registered Report [@ballou2024psychological], and the data collected for this study are part of the Open Play dataset [@ballou2025openplay; release v1.3.0, @ballouOpenPlayDataset2026], a longitudinal dataset that combined multi-platform video game digital trace data with daily and biweekly psychological measures from adult gamers in the UK and US over a three-month period. Qualifying participants completed the intake survey between `r intake_range_sentence`. The digital trace data span the following periods: `r telemetry_range_sentence`.
 
 This study received ethical approval from the Social Sciences and Humanities Inter-Divisional Research Ethics Committee at the University of Oxford (OII_CIA_23_107). All participants provided informed consent at the start of the study, including consent to their data being shared openly for reanalysis.
 
@@ -276,7 +290,7 @@ intake <- read_csv(here("data/clean/survey_intake.csv.gz"), show_col_types = FAL
 #| include: false
 
 # The analytic sample is defined by the models: all participants with a
-# qualified intake record (Open Play v1.2.6) and at least one valid SWEMWBS
+# qualified intake record (Open Play v1.3.0) and at least one valid SWEMWBS
 # response in biweekly waves 1-6. analytic_pids() (R/01_preprocess.R) is the
 # single definition of this rule; load_survey_data() and every R/ script use
 # it too. Telemetry-based playtime is zero for participants/waves without
@@ -284,30 +298,6 @@ intake <- read_csv(here("data/clean/survey_intake.csv.gz"), show_col_types = FAL
 analysis_pids <- analytic_pids()
 
 n_model <- length(analysis_pids)
-
-# Participants of the earlier (v1.2.1) analytic sample removed by the rule
-# (Data Source and Participants; Appendix A, Deviation D7). Written by
-# R/00_revoked_pids.R, which compares the v1.2.1 and v1.2.6 intake files.
-revoked_ref   <- read_csv(here("data/reference/revoked_qualified_pids.csv"),
-                          show_col_types = FALSE)
-no_intake_ref <- read_csv(here("data/reference/no_intake_record_pids.csv"),
-                          show_col_types = FALSE)
-n_revoked_intakes   <- nrow(revoked_ref)
-n_revoked_in_sample <- sum(revoked_ref$in_v121_analytic_sample)
-n_no_intake_v121    <- nrow(no_intake_ref)
-# D7 context: of the revoked in-sample participants, how many never linked an
-# account and how many have no console/PC telemetry at all; the no-intake group
-# has no console/PC telemetry in the clean files by construction (data-process.qmd
-# keeps only sessions of pids with an intake record; guarded).
-n_revoked_never_linked <- sum(revoked_ref$in_v121_analytic_sample & !revoked_ref$linked_any)
-n_revoked_no_telemetry <- sum(revoked_ref$in_v121_analytic_sample & !revoked_ref$any_telemetry)
-stopifnot(n_revoked_never_linked > 0, n_revoked_no_telemetry >= n_revoked_never_linked,
-          !any(no_intake_ref$any_telemetry))
-stopifnot(
-  n_revoked_in_sample == 133,
-  !any(revoked_ref$pid %in% analysis_pids),
-  !any(no_intake_ref$pid %in% analysis_pids)
-)
 
 genre_matched_pids <- read_csv(here("data/processed/genre_wave_long.csv"), show_col_types = FALSE) |>
   distinct(pid) |>
@@ -405,10 +395,6 @@ txt_n_us <- formatC(n_us, format = "d", big.mark = ",")
 txt_n_uk <- formatC(n_uk, format = "d", big.mark = ",")
 txt_mean_age <- round(mean(analytic_sample$age, na.rm = TRUE), 1)
 txt_pct_men <- round(100 * mean(analytic_sample$gender == "Man", na.rm = TRUE))
-txt_n_revoked_in_sample <- formatC(n_revoked_in_sample, format = "d", big.mark = ",")
-txt_n_no_intake_v121 <- formatC(n_no_intake_v121, format = "d", big.mark = ",")
-txt_n_revoked_never_linked <- formatC(n_revoked_never_linked, format = "d", big.mark = ",")
-txt_n_revoked_no_telemetry <- formatC(n_revoked_no_telemetry, format = "d", big.mark = ",")
 # Under the qualified-intake rule every analytic participant has an intake
 # record with an age inside the 18-40 screening range, so the demographic
 # subset is the full analytic sample (fixed prose below).
@@ -423,7 +409,7 @@ txt_n_waves_zero_play   <- formatC(n_waves_zero_play, format = "d", big.mark = "
 txt_pct_waves_zero_play <- round(100 * n_waves_zero_play / n_waves_analytic)
 ```
 
-Of the `r txt_n_intake_total` participants who completed the intake survey, `r txt_n_qualified` met the preregistered screening and linking criteria. The analytic sample comprises the `r txt_n_model` qualified participants who provided valid SWEMWBS responses in at least one biweekly survey wave. This definition corrects the sample of our first analyses: a later Open Play release (v1.2.4) corrected false positives in the qualification flag, revoking it for participants whose intake had not passed the screening and linking checks, and we excluded them (`r txt_n_revoked_in_sample` participants of the earlier analytic sample), together with `r txt_n_no_intake_v121` participants whose biweekly responses carry a participant identifier that matches no intake record, an identifier mismatch in the data provider's survey export (Appendix A, Deviation D7; @tbl-frequentist-registered in Appendix D compares the preregistered estimates with and without them). We measured playtime for these participants from their linked Nintendo, Xbox, and Steam accounts. Rather than excluding participants and waves without recorded play on these platforms, we retained them with zero hours: `r txt_n_pid_zero_play` participants (`r txt_pct_pid_zero_play`%) had no recorded play in any wave, and `r txt_n_waves_zero_play` of the `r txt_n_waves_analytic` person-waves (`r txt_pct_waves_zero_play`%) had none in that wave. In the full analytic sample, `r txt_n_genre_matched` participants (`r txt_pct_genre_matched`%) had at least one session of a game that we could match to a genre. All `r txt_n_total` analytic-sample participants have an age within the 18-40 screening range (`r txt_n_us` US, `r txt_n_uk` UK; mean age `r txt_mean_age` years, `r txt_pct_men`% men), so the demographic sensitivity analysis starts from the full analytic sample. We report full demographic characteristics, including country-level breakdowns, in @tbl-demographics.
+Of the `r txt_n_intake_total` participants who completed the intake survey, `r txt_n_qualified` met the preregistered screening and linking criteria. The analytic sample comprises the `r txt_n_model` qualified participants who provided valid SWEMWBS responses in at least one biweekly survey wave. We analysed release v1.3.0 of the dataset [@ballouOpenPlayDataset2026]. We measured playtime for these participants from their linked Nintendo, Xbox, and Steam accounts. Rather than excluding participants and waves without recorded play on these platforms, we retained them with zero hours: `r txt_n_pid_zero_play` participants (`r txt_pct_pid_zero_play`%) had no recorded play in any wave, and `r txt_n_waves_zero_play` of the `r txt_n_waves_analytic` person-waves (`r txt_pct_waves_zero_play`%) had none in that wave. In the full analytic sample, `r txt_n_genre_matched` participants (`r txt_pct_genre_matched`%) had at least one session of a game that we could match to a genre. All `r txt_n_total` analytic-sample participants have an age within the 18-40 screening range (`r txt_n_us` US, `r txt_n_uk` UK; mean age `r txt_mean_age` years, `r txt_pct_men`% men), so the demographic sensitivity analysis starts from the full analytic sample. We report full demographic characteristics, including country-level breakdowns, in @tbl-demographics.
 
 ```{r}
 #| label: genre-metadata-stats
@@ -564,10 +550,11 @@ if (file.exists(genre_wave_path) && file.exists(total_path)) {
 #| include: false
 
 survey <- load_survey_data()
-# Waves with an incomplete SWEMWBS: they enter the person means of playtime
-# (chunk model-data) but not the fits (Appendix F (M1)).
+# Guard for the M1 description (Methods, Appendix F): Open Play v1.3.0 ships
+# no incomplete SWEMWBS, so the person means of playtime (chunk model-data)
+# cover exactly the waves that enter the fits.
 n_swemwbs_incomplete <- sum(is.na(survey$wemwbs))
-stopifnot(n_swemwbs_incomplete > 0, n_swemwbs_incomplete < 500)
+stopifnot(n_swemwbs_incomplete == 0)
 baselines <- survey |> distinct(pid, baseline_date)
 
 ios     <- read_csv(here("data/clean/ios.csv.gz"),     show_col_types = FALSE)
@@ -1256,6 +1243,10 @@ p_matrix <- ggplot(dot_plot_df, aes(x = rank, y = genre)) +
   scale_fill_manual(values = setNames(col_for_genre(unique(as.character(dot_df$genre))),
                                       unique(as.character(dot_df$genre)))) +
   scale_x_continuous(breaks = int_hours$rank, expand = expansion(add = 0.5)) +
+  # Pin the rows to genre_order, as in the genre bars: the segment layer passes
+  # genre names as character, and without fixed limits ggplot appended genres
+  # absent from every top-40 combination at the top, shifting all dots down.
+  scale_y_discrete(limits = genre_order) +
   labs(y = NULL) +
   theme_minimal(base_size = 11) +
   theme(
@@ -1369,7 +1360,7 @@ combo_stats |>
 
 ## Analytic Approach
 
-We conducted all analyses in R [@rcoreteamLanguageEnvironmentStatistical2025] and wrote the manuscript in Quarto [@allaireQuarto2025]. We fit four Bayesian multilevel models with `brms` [@burkner2017brms] at the biweekly timescale, and refit each at the daily timescale as an exploratory extension. We preregistered two of them: the model of total playtime (M1) tests H1, and the genre model with independently estimated genre coefficients (M2) tests H2. We added the other two after seeing the M2 results, to examine their robustness: M3 keeps M2's predictors but pools the genre coefficients through a common prior, whereas M4 keeps total playtime as the single predictor, as in M1, and lets each wave's genre composition modify its slope; both describe the size of the genre differences through the estimated spread of the genre effects, and M4 also yields H1 estimates. All four models use the `brms` default priors, and Appendix F gives their equations and priors in full. We organise the results by hypothesis and describe the preregistered models first and the exploratory models second, and we label every figure row, legend entry, and table row by model, with its preregistration status. We catalogue deviations from the preregistered plan in Appendix A and flag them below where they affect interpretation, and we report the preregistered frequentist analyses in full in Appendix D.
+We conducted all analyses in R [@rcoreteamLanguageEnvironmentStatistical2025] and wrote the manuscript in Quarto [@allaireQuarto2025]. We fit four Bayesian multilevel models with `brms` [@burkner2017brms] at the biweekly timescale, and refit each at the daily timescale as an exploratory extension. Sampling ran in CmdStan (version `r txt_cmdstan_version`) through `cmdstanr`, with four chains per model and within-chain parallelisation, which affects only computation time. We preregistered two of them: the model of total playtime (M1) tests H1, and the genre model with independently estimated genre coefficients (M2) tests H2. We added the other two after seeing the M2 results, to examine their robustness: M3 keeps M2's predictors but pools the genre coefficients through a common prior, whereas M4 keeps total playtime as the single predictor, as in M1, and lets each wave's genre composition modify its slope; both describe the size of the genre differences through the estimated spread of the genre effects, and M4 also yields H1 estimates. All four models use the `brms` default priors, and Appendix F gives their equations and priors in full. We organise the results by hypothesis and describe the preregistered models first and the exploratory models second, and we label every figure row, legend entry, and table row by model, with its preregistration status. We catalogue deviations from the preregistered plan in Appendix A and flag them below where they affect interpretation, and we report the preregistered frequentist analyses in full in Appendix D.
 
 ## Smallest Effect Size of Interest
 
@@ -1385,7 +1376,7 @@ We test H2 with the preregistered joint Wald tests of whether the genre coeffici
 
 ### M1: Total Playtime
 
-M1 is the preregistered model for H1: is total playtime across Nintendo, Xbox, and Steam associated with wellbeing? We split each participant's playtime into a between-person part, their mean across waves (including the `r n_swemwbs_incomplete` waves with an incomplete SWEMWBS, which do not enter the models), and a within-person part, each wave's deviation from that mean, and regress SWEMWBS on both, so the model returns two coefficients: $\beta_W$, the association between a wave's deviation from a person's usual playtime and that wave's wellbeing, and $\beta_B$, the association between a person's habitual playtime and their average wellbeing. We estimate a random intercept for each participant because people differ in baseline wellbeing, and a random slope for within-person playtime because the association need not be identical for everyone (equations and priors in Appendix F).
+M1 is the preregistered model for H1: is total playtime across Nintendo, Xbox, and Steam associated with wellbeing? We split each participant's playtime into a between-person part, their mean across waves, and a within-person part, each wave's deviation from that mean, and regress SWEMWBS on both, so the model returns two coefficients: $\beta_W$, the association between a wave's deviation from a person's usual playtime and that wave's wellbeing, and $\beta_B$, the association between a person's habitual playtime and their average wellbeing. We estimate a random intercept for each participant because people differ in baseline wellbeing, and a random slope for within-person playtime because the association need not be identical for everyone (equations and priors in Appendix F).
 
 ```{r}
 #| label: txt-priors
@@ -1399,18 +1390,6 @@ wemwbs_obs        <- survey$wemwbs[!is.na(survey$wemwbs)]
 txt_wemwbs_median <- round(median(wemwbs_obs), 1)
 wemwbs_default_sd_scale <- max(2.5, round(mad(wemwbs_obs), 1))
 stopifnot(wemwbs_default_sd_scale == 2.5)
-
-# Divergent transitions of the centred fits of M3 and M3-D (16,000
-# post-warmup draws each), the reason both are now fitted in non-centred form
-# (chunk h2-hier-fit, R/fit_daily_models.R; Appendix F (M3) and Appendix D).
-# Documented constants from the overnight v1.2.6 refit of 2026-10-13/14: the
-# archived centred fits models/h2_hier_model_v3.rds (adapt_delta = 0.999) and
-# models/daily/m3_daily_ls_v3.rds (adapt_delta = 0.9995) are no longer loaded
-# by the render. Both exceed the limit of 10 that the diagnostics chunks
-# enforce, which is what the prose implies.
-h2_hier_divs_centred <- 68L
-d_m3_divs_centred    <- 29L
-stopifnot(h2_hier_divs_centred > 10, d_m3_divs_centred > 10)
 ```
 
 ### M2: Independent Genre Coefficients
@@ -1606,6 +1585,10 @@ n_md_item_miss  <- biw_md6 |> filter(pid %in% md_pids, is.na(wemwbs_md)) |> nrow
 n_md_valid      <- n_md_submitted - n_md_item_miss
 n_md_wave_miss  <- n_md_grid - n_md_valid
 pct_md_wave_miss <- round(100 * n_md_wave_miss / n_md_grid, 1)
+# Guard for the Missing Data and D5 wording: every completed survey in waves
+# 1-6 holds all seven SWEMWBS items (Open Play v1.3.0), so all outcome
+# missingness is wave nonresponse.
+stopifnot(n_md_item_miss == 0)
 
 wave_response <- biw_md6 |>
   filter(pid %in% md_pids) |>
@@ -1639,9 +1622,9 @@ txt_mean_playtime <- round(mean_playtime, 2)
 txt_sd_playtime <- round(sd_playtime, 2)
 ```
 
-Missingness in the outcome takes two forms. Item-level missingness is rare and all-or-nothing, with `r n_md_item_miss` submitted surveys missing all seven SWEMWBS items. Wave nonresponse is the dominant form of missingness, survey completion declined from `r wave_response$pct[1]`% at wave 1 to `r wave_response$pct[6]`% at wave 6, leaving `r txt_n_md_wave_miss` of the `r txt_n_md_grid` person-waves (`r pct_md_wave_miss`%) without an observed SWEMWBS. The dataset paper documents retention over the study period and missingness by data source [@ballou2025openplay].
+All missingness in the outcome is wave nonresponse, because every completed survey contains all seven SWEMWBS items. Survey completion declined from `r wave_response$pct[1]`% at wave 1 to `r wave_response$pct[6]`% at wave 6, leaving `r txt_n_md_wave_miss` of the `r txt_n_md_grid` person-waves (`r pct_md_wave_miss`%) without an observed SWEMWBS. The dataset paper documents retention over the study period and missingness by data source [@ballou2025openplay].
 
-We fit the models to the observed outcomes, an approach that is valid provided outcome missingness is at random given the modelled covariates and random effects. To test that assumption, we multiply imputed SWEMWBS on the complete participant × wave grid with two-level multiple imputation by chained equations (`mice` and `miceadds`) [@vanbuuren2011mice; @robitzsch2024miceadds]: predictive mean matching (`2l.pmm`) with participants as random-intercept clusters [@vanbuuren2018flexible], and m = 100 imputations, a number we set from the pilot fraction of missing information by von Hippel's [-@vonhippel2020] two-stage rule. Predictive mean matching donates observed values, so imputed scores respect the 1–5 scale. We fitted frequentist counterparts of the analysis models to each imputed dataset and pooled the estimates by Rubin's rules; neither pooled H1 coefficient was practically significant, as in the complete-case analyses, whereas the pooled tests no longer reject equality of the within-person genre coefficients (Appendix D, @tbl-sensitivity-imputation); @tbl-frequentist-Registered Reports the preregistered complete-case tests. We did not impute playtime because tracking was continuous and automatic even for participants with missing survey waves, so within linked platforms an absence of play is recorded absence rather than missing data, and exposures exist for every person-wave.
+We fit the models to the observed outcomes, an approach that is valid provided outcome missingness is at random given the modelled covariates and random effects. To test that assumption, we multiply imputed SWEMWBS on the complete participant × wave grid with two-level multiple imputation by chained equations (`mice` and `miceadds`) [@vanbuuren2011mice; @robitzsch2024miceadds]: predictive mean matching (`2l.pmm`) with participants as random-intercept clusters [@vanbuuren2018flexible], and m = 100 imputations, a number we set from the pilot fraction of missing information by von Hippel's [-@vonhippel2020] two-stage rule. Predictive mean matching donates observed values, so imputed scores respect the 1–5 scale. We fitted frequentist counterparts of the analysis models to each imputed dataset and pooled the estimates by Rubin's rules; neither pooled H1 coefficient was practically significant, as in the complete-case analyses, whereas the pooled tests no longer reject equality of the within-person genre coefficients (Appendix D, @tbl-sensitivity-imputation); @tbl-frequentist-registered reports the preregistered complete-case tests. We did not impute playtime because tracking was continuous and automatic even for participants with missing survey waves, so within linked platforms an absence of play is recorded absence rather than missing data, and exposures exist for every person-wave.
 
 # Results
 
@@ -2095,7 +2078,7 @@ stopifnot(h2_rhat < 1.05)
 # as tau approaches zero; archived fit kept for comparison);
 # models/h2_hier_model_v4 is this non-centred multi-membership form
 # (2026-10-14). New file names keep an older fit from being reloaded through
-# brms `file =` (scripts/refit_v126.sh).
+# brms `file =` (scripts/refit_v126.sh, now scripts/refit_v130.sh).
 h2_hier_data <- analysis_data |> filter(!is.na(wemwbs))
 hier_genres  <- sub("^gh_", "", gh_vars)  # 14 genre slugs, alphabetical
 stopifnot(length(hier_genres) == 14, !anyDuplicated(hier_genres),
@@ -2214,7 +2197,7 @@ message(sprintf("Hierarchical model - Max R-hat: %.3f", h2_hier_rhat))
 # M3 is fitted in the non-centred multi-membership form (chunk h2-hier-fit,
 # since 2026-10-14), which removes the funnel between tau and the genre
 # coefficients that produced the divergences of the centred v3 fit
-# (h2_hier_divs_centred, chunk txt-priors). Divergences that remain in the
+# (history in chunk h2-hier-fit). Divergences that remain in the
 # non-centred form would therefore point to a real problem with the posterior
 # geometry, not to the parameterisation: more than 10 in 16,000 post-warmup
 # draws stops the render; 1-10 are reported (Appendix E) with a warning.
@@ -2454,7 +2437,7 @@ Within persons (H1a), the posterior mean was `r txt_beta1_mean` SWEMWBS item-mea
 
 Between persons (H1b), the posterior mean was `r txt_beta2_mean` (95% CI: \[`r txt_beta2_ci_lo`, `r txt_beta2_ci_hi`\]), with `r txt_beta2_in_rope_pct`% of the posterior draws inside the ROPE. The estimate leaned negative, with a credible interval that reached zero, but its magnitude was far below the SESOI: a 2 hour/day difference in habitual playtime corresponded to `r txt_beta2_two_hours` points on the 1–5 scale, about `r txt_beta2_two_hours_pct_range`% of the 4-point range.
 
-Both components of H1 were supported under the ROPE rule (Deviation D3) and under the preregistered 90% CI grid (Appendix D), which classified the within-person coefficient as showing no practically significant association and the between-person coefficient as a negative association that is not practically significant.
+Both components of H1 were supported under the ROPE rule (Deviation D3) and under the preregistered 90% CI grid (Appendix D), which classified each coefficient as showing no practically significant association.
 
 M1's random slope estimates how much the within-person association varies between participants. The SD of the person-specific associations was `r txt_sd_slope_mean` (95% CI: \[`r txt_sd_slope_ci_lo`, `r txt_sd_slope_ci_hi`\]), and `r txt_sd_slope_p_above_pct`% of its posterior lay above the SESOI. Under the model's normal random-slope assumption, this spread combined with the average association implied that the within-person association exceeded the SESOI, in either direction, for about `r txt_h1_prop_mean_pct`% of participants. The Discussion returns to this minority.
 
@@ -2547,16 +2530,15 @@ stopifnot(isSingular(h2_cc_slopes), h2_cc_slopes_n_zero > length(gh_within) / 2)
 #| include: false
 #| cache: true
 #| dependson: "h2-wald"
-#| cache.extra: !expr tools::md5sum(c("data/processed/genre_wave_long_primary.csv", "data/processed/genre_wave_long.csv", "data/processed/total_playtime.csv", "data/processed_v121/genre_wave_long.csv", "data/processed_v121/total_playtime.csv", "data/clean/survey_biweekly.csv.gz", "data/clean_v121/survey_biweekly.csv.gz", "data/clean/ios.csv.gz", "data/clean/android.csv.gz", "data/clean/survey_intake.csv.gz", Sys.glob("data/reference/*.csv"), "R/01_preprocess.R", "R/prep_primary_genre.R"))
+#| cache.extra: !expr tools::md5sum(c("data/processed/genre_wave_long_primary.csv", "data/processed/genre_wave_long.csv", "data/processed/total_playtime.csv", "data/clean/survey_biweekly.csv.gz", "data/clean/ios.csv.gz", "data/clean/android.csv.gz", "data/clean/survey_intake.csv.gz", Sys.glob("data/reference/*.csv"), "R/01_preprocess.R", "R/prep_primary_genre.R"))
 
 # The preregistered (Stage 1) analyses were frequentist: lme4 models, H1 judged
 # by the 90% CI against the SESOI, H2 by joint Wald tests. This chunk fits
 # them in one place for Appendix D (@tbl-frequentist-registered): on the
-# analytic sample, under two preregistered specifications (all five platforms
-# for H1, Deviation D4; primary-genre attribution for H2, D1), and on the
-# earlier sample that D7 corrects (Open Play v1.2.1, 1,838 participants). It
-# sits here, after h2-wald, because it reuses that chunk's objects and
-# Appendix A (D7) quotes its results before Appendix D is reached.
+# analytic sample and under two preregistered specifications (all five
+# platforms for H1, Deviation D4; primary-genre attribution for H2, D1). It
+# sits here, after h2-wald, because it reuses that chunk's objects and the
+# Results and Appendix A quote its results before Appendix D is reached.
 # lme4 only; no brms fit is loaded.
 
 # Preregistered decision grid for H1 (Stage 1 Design Table, pre-registration
@@ -2739,36 +2721,11 @@ stopifnot(
 )
 reg_h2_primary <- fit_h2_reg(analysis_data_primary)
 
-# --- Earlier sample of D7 (v1.2.1: anyone with a valid SWEMWBS) -------------
-# Same code path: the v1.2.1 survey file (with its own baseline days) and
-# the v1.2.1 processed telemetry kept in data/processed_v121/.
-pids_v121 <- analytic_pids("data/clean_v121", require_qualified = FALSE)
-survey_v121 <- load_survey_data(pids_v121, clean_dir = "data/clean_v121",
-                                baseline_days = NULL)
-analysis_data_v121 <- build_analysis_frame(
-  survey_v121,
-  read_csv(here("data/processed_v121/total_playtime.csv"), show_col_types = FALSE),
-  read_csv(here("data/processed_v121/genre_wave_long.csv"), show_col_types = FALSE)
-)
-# The earlier sample is the analytic sample plus the participants D7 removes,
-# and its frame is row-identical to analysis_data for the retained ones.
-stopifnot(
-  isTRUE(all.equal(
-    as.data.frame(arrange(filter(analysis_data_v121, pid %in% analysis_pids), pid, wave)),
-    as.data.frame(arrange(analysis_data, pid, wave)), check.attributes = FALSE)),
-  length(pids_v121) == n_model + n_revoked_in_sample + n_no_intake_v121,
-  all(analysis_pids %in% pids_v121),
-  identical(sort(grep("^gh_.*_within$", names(analysis_data_v121), value = TRUE)),
-            sort(gh_within))
-)
-reg_h1_v121 <- fit_h1_reg(analysis_data_v121)
-reg_h2_v121 <- fit_h2_reg(analysis_data_v121)
-
 # --- Preregistered random-slope structure for H2 (chunk h2-wald) ---------------
 # The preregistered uncorrelated per-participant slopes for the 14 within-person
-# genre terms, fitted by ML on each H2 frame: the analytic sample (h2-wald),
-# primary attribution and the earlier sample (about 5 s each). Appendix D
-# fits every H2 model with a random intercept because all three are singular.
+# genre terms, fitted by ML on each H2 frame: the analytic sample (h2-wald) and
+# primary attribution (about 5 s). Appendix D fits every H2 model with a random
+# intercept because both are singular.
 fit_h2_slopes_reg <- function(d) {
   gw <- sort(grep("^gh_.*_within$", names(d), value = TRUE))
   gb <- sort(grep("^gh_.*_between$", names(d), value = TRUE))
@@ -2784,7 +2741,6 @@ fit_h2_slopes_reg <- function(d) {
 reg_slopes_singular <- isSingular(h2_cc_slopes)
 reg_slopes_n_zero   <- h2_cc_slopes_n_zero
 reg_slopes_primary  <- fit_h2_slopes_reg(analysis_data_primary)
-reg_slopes_v121     <- fit_h2_slopes_reg(analysis_data_v121)
 
 # --- Primary attribution: why the between-person SD is large ----------------
 # Under primary attribution a multi-genre game counts for one genre only, so
@@ -2806,33 +2762,22 @@ reg_sd_between_primary_wo_rare <- sd(reg_genre_players$b_between[reg_genre_playe
 reg_rare_label <- prettify_genre(sub("^gh_", "", reg_rare$var))  # mm-formula-setup
 
 # --- Guards for the fixed prose (Appendix D, Results, Appendix A) -----------
-reg_h1_all <- bind_rows(reg_h1_main, reg_h1_allplat, reg_h1_v121)
+reg_h1_all <- bind_rows(reg_h1_main, reg_h1_allplat)
 stopifnot(
-  # Preregistered H1 grid on the analytic sample (Results, Appendix D, D7): no
-  # practically significant association within persons; a negative
-  # association that is not practically significant between persons (90% CI
-  # below zero and above -0.06)
-  identical(reg_h1_main$verdict, c("No practically significant association",
-                                   "Negative association, not practically significant")),
-  reg_h1_main$hi[2] < 0, reg_h1_main$lo[2] > -reg_sesoi,
+  # Preregistered H1 grid on the analytic sample (Results, Appendix D): no
+  # practically significant association in either dimension (both 90% CIs
+  # cover zero and lie inside +-0.06)
+  identical(reg_h1_main$verdict, rep("No practically significant association", 2)),
+  all(reg_h1_main$lo < 0), all(reg_h1_main$hi > 0),
   # no H1 row in any specification is, or may be, practically significant
   # (Results H1 intro, Robustness, Methods Missing Data, Discussion)
   all(reg_h1_all$verdict %in% reg_h1_nps),
   # H2 on the analytic sample: H2a rejected, H2b not (as in h2-wald)
   reg_h2_main$p[1] < 0.05, reg_h2_main$p[2] >= 0.05,
-  # earlier sample: same H1 verdicts and same Wald decisions (D7)
-  identical(reg_h1_v121$verdict, reg_h1_main$verdict),
-  identical(reg_h2_v121$verdict, reg_h2_main$verdict),
-  # D7 prose: within-person slope unchanged, between-person slope slightly
-  # closer to zero on the corrected sample
-  abs(reg_h1_main$estimate[1] - reg_h1_v121$estimate[1]) < 0.001,
-  abs(reg_h1_main$estimate[2]) < abs(reg_h1_v121$estimate[2]),
-  abs(reg_h1_main$estimate[2] - reg_h1_v121$estimate[2]) < 0.005,
-  # all-platform H1 (Appendix D, D4, Discussion): same within-person
-  # verdict; the between-person interval includes zero, so that coefficient
-  # shows no practically significant association; mobile a small share
-  reg_h1_allplat$verdict[1] == reg_h1_main$verdict[1],
-  reg_h1_allplat$verdict[2] == "No practically significant association",
+  # all-platform H1 (Appendix D, D4, Discussion): both verdicts as on the
+  # analytic sample (no practically significant association; the between-
+  # person interval includes zero); mobile a small share
+  identical(reg_h1_allplat$verdict, reg_h1_main$verdict),
   reg_h1_allplat$lo[2] < 0, reg_h1_allplat$hi[2] > 0,
   reg_pct_mobile_time < 5,
   # primary attribution: neither joint test rejects equality
@@ -2844,11 +2789,10 @@ stopifnot(
   reg_rare$se_between > 1,
   reg_sd_between_primary_wo_rare < reg_h2_primary$sd_coef[2] / 5,
   reg_rare$n_primary < reg_rare$n_full,
-  # preregistered random-slope structure singular in all three H2 frames
+  # preregistered random-slope structure singular in both H2 frames
   # (Appendix D prose and table note), most slope SDs at zero
   reg_slopes_singular, reg_slopes_n_zero > length(gh_within) / 2,
-  reg_slopes_primary$singular, reg_slopes_primary$n_zero > length(gh_within) / 2,
-  reg_slopes_v121$singular, reg_slopes_v121$n_zero > length(gh_within) / 2
+  reg_slopes_primary$singular, reg_slopes_primary$n_zero > length(gh_within) / 2
 )
 
 # --- Inline quantities ------------------------------------------------------
@@ -2856,22 +2800,15 @@ f3  <- function(x) sprintf("%.3f", x)
 f4  <- function(x) sprintf("%.4f", x)
 fci <- function(lo, hi) sprintf("[%.4f, %.4f]", lo, hi)
 fn  <- function(x) formatC(x, format = "d", big.mark = ",")
-txt_reg_n_v121_pid <- fn(reg_h1_v121$n_pid[1])
-txt_reg_n_v121_obs <- fn(reg_h1_v121$n_obs[1])
 txt_reg_n_main_obs <- fn(reg_h1_main$n_obs[1])
 txt_reg_w_main  <- f4(reg_h1_main$estimate[1])
 txt_reg_w_main_ci <- fci(reg_h1_main$lo[1], reg_h1_main$hi[1])
-txt_reg_w_v121  <- f4(reg_h1_v121$estimate[1])
 txt_reg_b_main  <- f4(reg_h1_main$estimate[2])
-txt_reg_b_v121  <- f4(reg_h1_v121$estimate[2])
 txt_reg_b_main_ci <- fci(reg_h1_main$lo[2], reg_h1_main$hi[2])
-txt_reg_b_v121_ci <- fci(reg_h1_v121$lo[2], reg_h1_v121$hi[2])
 txt_reg_b_allplat <- f4(reg_h1_allplat$estimate[2])
 txt_reg_b_allplat_ci <- fci(reg_h1_allplat$lo[2], reg_h1_allplat$hi[2])
 txt_reg_p_main_a <- f3(reg_h2_main$p[1])
 txt_reg_p_main_b <- f3(reg_h2_main$p[2])
-txt_reg_p_v121_a <- f3(reg_h2_v121$p[1])
-txt_reg_p_v121_b <- f3(reg_h2_v121$p[2])
 txt_reg_chisq_primary_a <- sprintf("%.1f", reg_h2_primary$chisq[1])
 txt_reg_chisq_primary_b <- sprintf("%.1f", reg_h2_primary$chisq[2])
 txt_reg_df_primary <- reg_h2_primary$df[1]
@@ -2890,7 +2827,6 @@ txt_reg_pct_mobile_pw <- sprintf("%.1f", reg_pct_mobile_pw)
 txt_reg_pct_mobile_time <- sprintf("%.1f", reg_pct_mobile_time)
 txt_reg_slopes_n_zero <- reg_slopes_n_zero
 txt_reg_slopes_n_zero_primary <- reg_slopes_primary$n_zero
-txt_reg_slopes_n_zero_v121 <- reg_slopes_v121$n_zero
 ```
 
 ```{r}
@@ -2905,7 +2841,7 @@ txt_wald_b_chisq <- sprintf("%.1f", h2_cc_wald_b$Chisq[2])
 txt_wald_b_p <- sprintf("%.3f", h2_cc_wald_b$"Pr(>Chisq)"[2])
 ```
 
-The preregistered inference for H2 is a joint Wald test of whether the 14 genre coefficients are equal. We fitted a frequentist version of M2 by maximum likelihood, with the same fixed effects and random intercept, and tested the equality of its coefficients. The null hypothesis sets the 13 differences between the first genre's coefficient and each of the others to zero, which holds only if all 14 coefficients are equal; rejecting it means that at least one difference is non-zero, and hence that at least two genres differ. Within persons, the test rejected equality (χ²(`r h2_cc_wald_a$Df[2]`) = `r txt_wald_a_chisq`, *p* = `r txt_wald_a_p`): at least two genres differed in how a change in their playtime related to a change in wellbeing. Between persons, the test did not reject equality (χ²(`r h2_cc_wald_b$Df[2]`) = `r txt_wald_b_chisq`, *p* = `r txt_wald_b_p`). Under the preregistered criteria, H2a was supported and H2b was not. Appendix D reports these tests together with the preregistered H1 equivalence tests, under two preregistered specifications and on the earlier sample that Deviation D7 corrects (@tbl-frequentist-registered); under the preregistered primary-genre attribution, the within-person test did not reject equality (*p* = `r txt_reg_p_primary_a`).
+The preregistered inference for H2 is a joint Wald test of whether the 14 genre coefficients are equal. We fitted a frequentist version of M2 by maximum likelihood, with the same fixed effects and random intercept, and tested the equality of its coefficients. The null hypothesis sets the 13 differences between the first genre's coefficient and each of the others to zero, which holds only if all 14 coefficients are equal; rejecting it means that at least one difference is non-zero, and hence that at least two genres differ. Within persons, the test rejected equality (χ²(`r h2_cc_wald_a$Df[2]`) = `r txt_wald_a_chisq`, *p* = `r txt_wald_a_p`): at least two genres differed in how a change in their playtime related to a change in wellbeing. Between persons, the test did not reject equality (χ²(`r h2_cc_wald_b$Df[2]`) = `r txt_wald_b_chisq`, *p* = `r txt_wald_b_p`). Under the preregistered criteria, H2a was supported and H2b was not. Appendix D reports these tests together with the preregistered H1 equivalence tests, also under two preregistered specifications (@tbl-frequentist-registered); under the preregistered primary-genre attribution, the within-person test did not reject equality (*p* = `r txt_reg_p_primary_a`).
 
 ```{r}
 #| label: h2-joint-test
@@ -3619,8 +3555,7 @@ d_xfl_dr  <- posterior::as_draws_df(d_m1_xfl)
 d_rx_b1    <- mean(d_xfl_dr$b_xfl_within)
 d_rx_b1_ci <- quantile(d_xfl_dr$b_xfl_within, c(.025, .975))
 # M3-D in the non-centred multi-membership form (R/fit_daily_models.R, since
-# 2026-10-14; the centred _v3 fit had d_m3_divs_centred divergences, chunk
-# txt-priors).
+# 2026-10-14; the centred _v3 fit had more than 10 divergences).
 d_m3_ls   <- readRDS(here("models/daily/m3_daily_ls_v4.rds"))
 d_m4_ls   <- readRDS(here("models/daily/m4_daily_mm_ls.rds"))
 
@@ -3900,11 +3835,13 @@ ggplot(d_fig_draws, aes(x = value, y = param)) +
 # abstract-claims-guard). Same-day windows on reported timezones; hybrid
 # decomposition (within = same-day deviations, between = habitual daily
 # hours); benchmark d_primary = 1 slider point per hour (MID 5 / 5 h).
-# Values re-pinned 2026-10-14 (v1.2.6, default priors, non-centred M3-D);
-# earlier: the 2026-07-31 option-B refits. Wording follows the
-# pre-committed rules in the analysis plan (notes/, local).
+# Values re-pinned 2026-10-18 after the refit on Open Play v1.3.0 (CmdStan,
+# default priors, non-centred M3-D); earlier: 2026-10-14 (v1.2.6) and the
+# 2026-07-31 option-B refits. Wording
+# follows the pre-committed rules in the analysis plan (notes/, local).
 stopifnot(
-  d_n_resp == 13071, d_n_pid == 726,
+  # d_n_resp, d_n_pid: data-only counts, re-pinned 2026-10-17 on v1.3.0
+  d_n_resp == 13338, d_n_pid == 749,
   abs(d_primary - 1) < 1e-12, d_mid_daily == 5,
   d_zero_share > 0.60, d_zero_share < 0.62,
   d_median_days == 21,
@@ -3913,7 +3850,7 @@ stopifnot(
   d_shooter_d > 0.2,
   d_ls_av_r > 0.8, d_ls_av_rw > 0.6,
   # H1-daily within: lower bound at zero; a fifth of the benchmark; doses
-  abs(d_r1$b1 - 0.18) < 5e-3,
+  abs(d_r1$b1 - 0.17) < 5e-3,
   d_r1$b1_ci[1] >= 0, d_r1$b1_ci[1] < 0.01,
   d_r1$b1_rope > 0.9995,
   d_primary / d_r1$b1 > 4, d_primary / d_r1$b1 < 6.5,
@@ -3923,21 +3860,21 @@ stopifnot(
   # floored keeps it (the "does not survive them all" claim)
   abs(d_r1a$b1 - 0.13) < 5e-3, d_r1a$b1_ci[1] < 0,
   abs(d_ar1 - 0.31) < 0.02,
-  abs(d_r1w$b1 - 0.15) < 5e-3, d_r1w$b1_ci[1] < 0,
+  abs(d_r1w$b1 - 0.14) < 5e-3, d_r1w$b1_ci[1] < 0,
   abs(d_rx_b1 - 0.18) < 5e-3, d_rx_b1_ci[1] > 0,
   # H1-daily between (habitual daily hours): negative lean inside region
-  abs(d_r1$b2 - (-0.38)) < 5e-3,
+  abs(d_r1$b2 - (-0.40)) < 5e-3,
   d_r1$b2_ci[1] < 0, d_r1$b2_ci[2] > 0,
   d_r1$b2_rope > 0.92, d_r1$b2_rope < 0.97,
   d_mid_daily / abs(d_r1$b2_ci[1]) <= 5,
-  abs(d_r1f$b2 - (-0.37)) < 5e-3, d_r1f$b2_ci[1] < 0, d_r1f$b2_ci[2] > 0,
+  abs(d_r1f$b2 - (-0.36)) < 5e-3, d_r1f$b2_ci[1] < 0, d_r1f$b2_ci[2] > 0,
   # Person slope SD bounded: 'practically negligible' rests on at least 95%
   # of the posterior below the SESOI (the 95% convention used throughout;
-  # 96.5% after the v1.2.6 refit, 97.9% before)
-  abs(d_r1$sd_slope - 0.73) < 5e-3, (1 - d_r1$sd_slope_above) > 0.95,
+  # 96.5% on v1.2.6, 97.9% before)
+  abs(d_r1$sd_slope - 0.70) < 5e-3, (1 - d_r1$sd_slope_above) > 0.95,
   # M4-D agreement with M1-D on both dimensions
-  abs(d_m4_b1 - 0.14) < 5e-3, abs(d_m4_b1 - d_r1$b1) < 0.1,
-  abs(d_m4_b2 - (-0.41)) < 5e-3, abs(d_m4_b2 - d_r1$b2) < 0.1,
+  abs(d_m4_b1 - 0.13) < 5e-3, abs(d_m4_b1 - d_r1$b1) < 0.1,
+  abs(d_m4_b2 - (-0.40)) < 5e-3, abs(d_m4_b2 - d_r1$b2) < 0.1,
   # Total-playtime slopes and the person slope SD all below the benchmark
   max(d_r1$b1, d_r1a$b1, d_r1w$b1, d_rx_b1, d_r1$sd_slope) < d_primary,
   # H2-daily spreads: regression pins on the printed values only, with no
@@ -3948,25 +3885,23 @@ stopifnot(
   # spreads in the max() above were dropped). Re-pin after a refit.
   abs(d_m2_sdw - 0.63) < 5e-3,
   abs(d_r3$tau_w - 0.22) < 5e-3,
-  abs(d_sigma_sw - 0.44) < 5e-3,
+  abs(d_sigma_sw - 0.49) < 5e-3,
   abs(d_r3$tau_b - 0.90) < 5e-3,
-  abs(d_sigma_sb - 0.20) < 5e-3,
+  abs(d_sigma_sb - 0.19) < 5e-3,
   # Discussion and abstract: the daily hierarchical-model genre spread is
   # small, fewer than one of the 14 genres expected more than one slider
   # point per hour from the common genre effect
   14 * d_tau_w_share < 1,
   # Diagnostics: healthy R-hats; the non-centred M3-D (since 2026-10-14) has
-  # at most 10 divergences, as the Appendix D sentence reports (the centred
-  # _v3 fit had d_m3_divs_centred, which the same sentence discloses); others
-  # zero
+  # at most 10 divergences, as the Appendix D sentence reports; others zero
   max(d_r1$rhat, d_r1f$rhat, d_r1a$rhat, d_r1w$rhat, d_m2_rhat,
       d_r3$rhat, d_m4_rhat) < 1.05,
-  d_r3$divs <= 10, d_m3_divs_centred > 10,
+  d_r3$divs <= 10,
   max(d_r1$divs, d_r1f$divs, d_r1a$divs, d_r1w$divs, d_m2_divs,
       d_m4_divs) == 0,
-  # "roughly double" in s_w units
-  (d_r1$b1 / sesoi_d$s_w_ls) / (beta1_mean / sesoi_d$s_w_swemwbs) > 1.4,
-  (d_r1$b1 / sesoi_d$s_w_ls) / (beta1_mean / sesoi_d$s_w_swemwbs) < 2.5
+  # "about a quarter larger" in s_w units (ratio about 1.26 on v1.3.0; 1.6 on v1.2.6)
+  (d_r1$b1 / sesoi_d$s_w_ls) / (beta1_mean / sesoi_d$s_w_swemwbs) > 1.15,
+  (d_r1$b1 / sesoi_d$s_w_ls) / (beta1_mean / sesoi_d$s_w_swemwbs) < 1.4
 )
 # Appendix D sentence on M3-D divergences (0 prints as 'no')
 txt_d_m3_divs <- if (d_r3$divs == 0) "no" else as.character(d_r3$divs)
@@ -3974,7 +3909,7 @@ txt_d_m3_divs <- if (d_r3$divs == 0) "no" else as.character(d_r3$divs)
 
 ## Robustness
 
-Two sensitivity analyses tested whether the conclusions depended on analytic choices. Neither changed the H1 conclusion. Adjusting for age, gender, and ethnicity shifted the H1 coefficients by less than 0.01 points and changed no ROPE verdict (Appendix D, @tbl-sensitivity-demo). Refitting on multiply imputed data (m = 100) left neither H1 coefficient practically significant under the preregistered 90% CI grid (equivalence tests are two one-sided tests at α = .05, which correspond to a 90% rather than a 95% interval; @lakensEquivalenceTestsPractical2017a) but, unlike the complete-case analysis, rejected genre-coefficient equality in neither pooled dimension (Appendix D, @tbl-sensitivity-imputation). Appendix D gives full specifications, results, and diagnostics for both analyses, together with the predictive model comparison and the preregistered frequentist analyses (@tbl-frequentist-registered): no H1 coefficient was practically significant under the preregistered grid with mobile play included or on the earlier sample, and the within-person joint test for H2 rejected equality under full but not under primary genre attribution.
+Two sensitivity analyses tested whether the conclusions depended on analytic choices. Neither changed the H1 conclusion. Adjusting for age, gender, and ethnicity shifted the H1 coefficients by less than 0.01 points and changed no ROPE verdict (Appendix D, @tbl-sensitivity-demo). Refitting on multiply imputed data (m = 100) left neither H1 coefficient practically significant under the preregistered 90% CI grid (equivalence tests are two one-sided tests at α = .05, which correspond to a 90% rather than a 95% interval; @lakensEquivalenceTestsPractical2017a) but, unlike the complete-case analysis, rejected genre-coefficient equality in neither pooled dimension (Appendix D, @tbl-sensitivity-imputation). Appendix D gives full specifications, results, and diagnostics for both analyses, together with the predictive model comparison and the preregistered frequentist analyses (@tbl-frequentist-registered): no H1 coefficient was practically significant under the preregistered grid with or without mobile play, and the within-person joint test for H2 rejected equality under full but not under primary genre attribution.
 
 ```{r}
 #| label: abstract-claims-guard
@@ -3993,23 +3928,23 @@ abstract_hours <- total_playtime |>
   summarise(h = sum(total_hours_per_day * 14)) |>
   pull(h)
 stopifnot(
-  n_participants == 1608,
-  n_observations == 6293,
-  n_titles_instudy == 4152,
-  abs(abstract_hours - 226001) < 500,
-  abs(beta1_mean - 0.003)     < 5e-4,
-  abs(beta1_ci[1] - (-0.008)) < 5e-4,
-  abs(beta1_ci[2] - 0.014)    < 5e-4,
+  n_participants == 1668,
+  n_observations == 6518,
+  n_titles_instudy == 4128,
+  abs(abstract_hours - 222125) < 500,
+  abs(beta1_mean - 0.004)     < 5e-4,
+  abs(beta1_ci[1] - (-0.007)) < 5e-4,
+  abs(beta1_ci[2] - 0.015)    < 5e-4,
   beta1_in_rope > 0.9995,
-  abs(beta2_mean - (-0.016))  < 5e-4,
+  abs(beta2_mean - (-0.015))  < 5e-4,
   abs(beta2_ci[1] - (-0.034)) < 5e-4,
-  abs(beta2_ci[2] - 0.002)    < 5e-4,
+  abs(beta2_ci[2] - 0.003)    < 5e-4,
   abs(tau_mean - 0.016)       < 5e-4,
-  abs(sigma_sw_mean - 0.045)  < 5e-4,
+  abs(sigma_sw_mean - 0.038)  < 5e-4,
   genre_sd_mean > tau_mean, genre_sd_mean < sigma_sw_mean,
-  abs(sd_slope_mean - 0.039)  < 5e-4,
-  abs(sd_slope_ci[1] - 0.008) < 5e-4,
-  abs(sd_slope_ci[2] - 0.065) < 5e-4,
+  abs(sd_slope_mean - 0.029)  < 5e-4,
+  abs(sd_slope_ci[1] - 0.003) < 5e-4,
+  abs(sd_slope_ci[2] - 0.058) < 5e-4,
   # H2 sentences (2026-10-13, descriptive H2): the preregistered joint tests come
   # first and are guarded in h2-wald (within p < .05, between p > .05) and in
   # frequentist-registered (primary attribution: neither test rejects); "fewer
@@ -4089,7 +4024,7 @@ Still, a null average could conceal a minority for whom play, in total or in spe
 
 ## Shortening the Window Does Not Recover an Effect
 
-A further possibility is temporal, namely that the wellbeing effects of play might surface and dissipate faster than a biweekly retrospective survey can register. To test this claim, the exploratory daily analysis shortens the window from fourteen days to one and reproduces the total-playtime conclusion. Within persons, every total-playtime estimate lies inside the equivalence region under every specification, and the same-day point estimate is positive, roughly double its biweekly counterpart in within-person standard-deviation units (`r txt_d_b1_sd_units` versus `r txt_beta1_sd_units` s~w~ per hour). The direction is consistent with the session-level affective uplift reported among *PowerWash Simulator* players [@vuorreAffectiveUpliftVideo2024], though its resolution is fragile across the robustness refits and should be read as suggestive. Its practical magnitude is negligible either way: shifting daily life satisfaction by one minimally important difference (`r d_mid_daily` points on the 0–100 slider, the daily counterpart of the 0.3-point SWEMWBS difference behind the preregistered SESOI) would require `r txt_d_hours_to_mid` additional hours of same-day play, and under the hierarchical prior the daily within-person genre spread implies an expected `r txt_d_tau_w_n_genres` of the 14 genres more than one slider point per hour from the common genre effect. Therefore, moving the measurement closer in time, on its own, does not conjure a meaningful effect.
+A further possibility is temporal, namely that the wellbeing effects of play might surface and dissipate faster than a biweekly retrospective survey can register. To test this claim, the exploratory daily analysis shortens the window from fourteen days to one and reproduces the total-playtime conclusion. Within persons, every total-playtime estimate lies inside the equivalence region under every specification, and the same-day point estimate is positive, about a quarter larger than its biweekly counterpart in within-person standard-deviation units (`r txt_d_b1_sd_units` versus `r txt_beta1_sd_units` s~w~ per hour). The direction is consistent with the session-level affective uplift reported among *PowerWash Simulator* players [@vuorreAffectiveUpliftVideo2024], though its resolution is fragile across the robustness refits and should be read as suggestive. Its practical magnitude is negligible either way: shifting daily life satisfaction by one minimally important difference (`r d_mid_daily` points on the 0–100 slider, the daily counterpart of the 0.3-point SWEMWBS difference behind the preregistered SESOI) would require `r txt_d_hours_to_mid` additional hours of same-day play, and under the hierarchical prior the daily within-person genre spread implies an expected `r txt_d_tau_w_n_genres` of the 14 genres more than one slider point per hour from the common genre effect. Therefore, moving the measurement closer in time, on its own, does not conjure a meaningful effect.
 
 ## Are all games the same?
 
@@ -4109,7 +4044,7 @@ Several limitations constrain these conclusions and point at the work that shoul
 
 ## Data and Code Availability
 
-The Open Play dataset (v1.2.6) is openly available on Zenodo at <https://zenodo.org/records/22811439>, released under a CC0 licence with a supplemental no-reidentification clause [@ballou2025openplay]. All analysis code is available at <https://github.com/Thomhak/open-play-genres>. Preregistration materials for the Stage 1 programmatic Registered Report are available at <https://osf.io/mvngt/>.
+The Open Play dataset (v1.3.0) is openly available on Zenodo at <https://zenodo.org/records/23419571>, released under a CC0 licence with a supplemental no-reidentification clause [@ballouOpenPlayDataset2026; @ballou2025openplay]. All analysis code is available at <https://github.com/Thomhak/open-play-genres>. Preregistration materials for the Stage 1 programmatic Registered Report are available at <https://osf.io/mvngt/>.
 
 ## Funding
 
@@ -4137,7 +4072,7 @@ Data-sharing partners had no role in the design, analysis, or publication of res
 ```
 # Appendix A: Deviations from Preregistration {.appendix}
 
-This appendix lists all deviations from the Stage 1 preregistration [@ballou2024psychological] in the structured disclosure format of Willroth and Atherton [-@willroth2024reporting]: the original wording, what was done instead, the reason, the timing relative to data access and results, and the impact on interpretation. Analyses that were not preregistered (M3, M4, and the daily-timescale analysis) are not deviations and are labelled exploratory where they appear. Changes made upstream during data collection, outside the authors' control, are consolidated as D6. D7 records a restriction of the analytic sample that followed a correction in a later upstream data release.
+This appendix lists all deviations from the Stage 1 preregistration [@ballou2024psychological] in the structured disclosure format of Willroth and Atherton [-@willroth2024reporting]: the original wording, what was done instead, the reason, the timing relative to data access and results, and the impact on interpretation. Analyses that were not preregistered (M3, M4, and the daily-timescale analysis) are not deviations and are labelled exploratory where they appear. Changes made upstream during data collection, outside the authors' control, are consolidated as D6.
 
 | \# | Topic | Type | Timing |
 |:-----------------|:-------------------|:-----------------|:-----------------|
@@ -4147,7 +4082,6 @@ This appendix lists all deviations from the Stage 1 preregistration [@ballou2024
 | D4 | H1 platform scope without mobile | Variables | After data access, before results known |
 | D5 | Missing-data protocol | Analytic approach | After complete-case results known |
 | D6 | Upstream data-collection changes | Data collection procedures | During data collection, before data access |
-| D7 | Analytic sample restricted to qualified participants | Data exclusions | After data access and after results known |
 
 ## Structured disclosures
 
@@ -4201,7 +4135,7 @@ This appendix lists all deviations from the Stage 1 preregistration [@ballou2024
 |:------------------|:----------------------------------------------------|
 | **Type** | Analytic approach |
 | **Original wording** | Multiple imputation via `mice` (predictive mean matching, wide format); report both complete-case and imputed results. |
-| **Deviation description** | Wave nonresponse rather than item missingness dominates: `r txt_n_md_wave_miss` of `r txt_n_md_grid` person-waves (`r pct_md_wave_miss`%) have no SWEMWBS. We therefore imputed on the full participant × wave grid with two-level MICE (`2l.pmm`, participants as clusters; m = 100 by von Hippel's rule) and report pooled frequentist results alongside the complete-case Bayesian models (Appendix D). |
+| **Deviation description** | All outcome missingness is wave nonresponse: `r txt_n_md_wave_miss` of `r txt_n_md_grid` person-waves (`r pct_md_wave_miss`%) have no SWEMWBS. We therefore imputed on the full participant × wave grid with two-level MICE (`2l.pmm`, participants as clusters; m = 100 by von Hippel's rule) and report pooled frequentist results alongside the complete-case Bayesian models (Appendix D). |
 | **Reason** | Single-level wide-format PMM ignores the hierarchical structure and cannot address wave nonresponse. |
 | **Timing** | Adopted after the complete-case results were known; the protocol was taken over unchanged from the sibling Stage 2 studies of the same programmatic report rather than tailored to these results |
 | **Reader impact** | The H1 conclusions are unchanged under imputation, whereas the pooled within-person joint test for H2 does not reject the equality of the genre coefficients, unlike the complete-case test; the pooled between-person H1 interval widens because person means are uncertain for participants with few observed waves. Agreement between complete-case and imputed H1 results does not rule out bias from nonresponse that depends on unobserved wellbeing. |
@@ -4216,17 +4150,6 @@ This appendix lists all deviations from the Stage 1 preregistration [@ballou2024
 | **Reason** | Recruitment and data-collection constraints upstream; outside the authors' control. |
 | **Timing** | During data collection, before data access |
 | **Reader impact** | Findings generalise to adults aged 18–40; the lower coverage threshold adds measurement error to total playtime; Android contributes daily totals only (see D4). |
-
-### D7: Analytic sample restricted to qualified participants
-
-| Field | Content |
-|:------------------|:----------------------------------------------------|
-| **Type** | Data exclusions |
-| **Original wording** | Those who "(1) self-report playing video games, (2) self-report that at least 75% of their total video game play takes place on the platforms included in the study, and (3) are willing to link all relevant gaming accounts will be invited to complete an intake survey"; participants without playtime logged on any self-reported platform during a 7-day baseline are excluded before the panel surveys. "We do not preregister any further exclusion criteria." |
-| **Deviation description** | The analytic sample is restricted to participants whose intake record is flagged as qualified in Open Play v1.2.6. Release v1.2.4 revoked this flag for `r n_revoked_intakes` intakes of participants who had entered the surveys without passing the account-linking and telemetry validation; `r txt_n_revoked_in_sample` of them had been in our earlier analytic sample and are now excluded. The same rule excludes `r txt_n_no_intake_v121` participants of the earlier sample whose biweekly responses carry a participant identifier that matches no intake record in any release. We traced this to the data provider's survey export, which takes the identifier from each survey response without checking it against the intake table, so that responses whose identifier differs from the one on the exported intake record, or whose intake was never completed, appear as participants without a screening record; we reported it to the Open Play team. Their qualification cannot be established from the release, and the cleaned release files hold no console or PC telemetry for them. The analytic sample is `r txt_n_model` participants. |
-| **Reason** | An upstream correction of the eligibility flag, described in the release notes as false positives. Most participants whose flag was revoked had not met the preregistered linking and telemetry criteria: of the `r txt_n_revoked_in_sample` in the earlier sample, `r txt_n_revoked_never_linked` had never linked an account and `r txt_n_revoked_no_telemetry` have no console or PC telemetry at all, so their zero playtime was unobserved rather than recorded. The participants without an intake record have no screening record under that identifier and no console or PC telemetry in the cleaned release files, so their exposure is unknown. Retaining either group would have entered missing exposure as zero play. |
-| **Timing** | After data access and after the results were known; triggered by the August 2026 data release, not by the results |
-| **Reader impact** | The sample is smaller, and estimates refer to participants whose playtime was validly observed. In frequentist refits of the preregistered models on the earlier sample (`r txt_reg_n_v121_pid` participants) and on the corrected sample, the within-person slope is practically unchanged (`r txt_reg_w_v121` and `r txt_reg_w_main`), the between-person slope moves slightly towards zero (from `r txt_reg_b_v121` `r txt_reg_b_v121_ci` to `r txt_reg_b_main` `r txt_reg_b_main_ci`, 90% CIs), the preregistered decision grid gives the same H1 verdicts on both samples (no practically significant association within persons; a negative association that is not practically significant between persons), and both joint Wald tests reach the same decisions (within: *p* = `r txt_reg_p_v121_a` and `r txt_reg_p_main_a`; between: *p* = `r txt_reg_p_v121_b` and `r txt_reg_p_main_b`; Appendix D, @tbl-frequentist-registered). |
 
 # Appendix B: Genre Mapping {.appendix}
 
@@ -4345,28 +4268,26 @@ genre_descriptives_extended |>
 
 # Appendix D: Sensitivity and Supplementary Analyses {.appendix}
 
-This appendix first reports the preregistered frequentist analyses, on the analytic sample, under two preregistered specifications, and on the earlier sample that Deviation D7 corrects. It then reports the two sensitivity analyses summarised under Robustness in the main text: demographic covariate adjustment and multiple imputation of wave nonresponse (with distributional diagnostics). The predictive model comparison (whether genre terms improve out-of-sample prediction) follows, and finally the design details and sensitivity refits of the daily-timescale analysis.
+This appendix first reports the preregistered frequentist analyses on the analytic sample and under two preregistered specifications. It then reports the two sensitivity analyses summarised under Robustness in the main text: demographic covariate adjustment and multiple imputation of wave nonresponse (with distributional diagnostics). The predictive model comparison (whether genre terms improve out-of-sample prediction) follows, and finally the design details and sensitivity refits of the daily-timescale analysis.
 
 ## Preregistered Frequentist Analysis
 
-The preregistered analyses were frequentist: H1 was to be tested by an equivalence test on the 90% confidence intervals of the within-between model of total playtime, and H2 by joint Wald tests of the equality of the genre coefficients, both on multilevel models fitted with `lme4`. The Bayesian models in the main text are the models we interpret (Deviation D3), and the Results report the preregistered H2 tests on the analytic sample. This subsection reports all preregistered tests in one place (@tbl-frequentist-registered): on the analytic sample, under the two preregistered specifications from which the main analysis departs, total playtime across all five platforms for H1 (Deviation D4) and primary-genre attribution for H2 (Deviation D1), and on the earlier analytic sample that Deviation D7 corrects. The all-platform total adds each wave's iOS and Android gaming minutes to its Nintendo, Xbox, and Steam playtime; `r txt_reg_n_mobile_pids` participants had mobile minutes in at least one analysed person-wave, and `r txt_reg_pct_mobile_pw`% of the analysed person-waves had any. Under primary attribution, each game's full playtime counts towards its first IGDB genre label that remains in the 14-genre taxonomy (Appendix B), so genre exposures are mutually exclusive. The earlier sample comprises the `r txt_reg_n_v121_pid` participants with at least one valid SWEMWBS in Open Play v1.2.1, without the qualification condition, and its analysis frame was built from the v1.2.1 files with the same code as the main frame. Each H1 model has a random intercept and a correlated random slope for within-person playtime, as preregistered, and was fitted by restricted maximum likelihood; each H2 model was fitted by maximum likelihood with a random intercept, because the preregistered uncorrelated random slopes gave a singular fit in all three H2 analyses (table note). H1 verdicts follow the preregistered decision grid of the Stage 1 Design Table, applied to the lower (LB) and upper (UB) bounds of the 90% confidence interval: LB \> 0.06 or UB \< −0.06 indicates a practically significant positive or negative association; LB \> 0 and UB \> 0.06, or UB \< 0 and LB \< −0.06, a positive or negative association that may be practically significant; LB \> 0 and UB \< 0.06, or UB \< 0 and LB \> −0.06, a positive or negative association that is not practically significant; LB \> −0.06 and UB \< 0.06 with an interval that covers zero, no practically significant association; and an interval that covers zero and one or both bounds, an inconclusive result. The Design Table lists the absence of a practically significant association for every interval inside ±0.06, including those that exclude zero, and we applied the more specific classes to the latter; it also gives the first bound as LB \> −0.06, which we read as LB \> 0.06, the counterpart of UB \< −0.06. H2 is supported if the joint test rejects equality at α = .05.
+The preregistered analyses were frequentist: H1 was to be tested by an equivalence test on the 90% confidence intervals of the within-between model of total playtime, and H2 by joint Wald tests of the equality of the genre coefficients, both on multilevel models fitted with `lme4`. The Bayesian models in the main text are the models we interpret (Deviation D3), and the Results report the preregistered H2 tests on the analytic sample. This subsection reports all preregistered tests in one place (@tbl-frequentist-registered): on the analytic sample and under the two preregistered specifications from which the main analysis departs, total playtime across all five platforms for H1 (Deviation D4) and primary-genre attribution for H2 (Deviation D1). The all-platform total adds each wave's iOS and Android gaming minutes to its Nintendo, Xbox, and Steam playtime; `r txt_reg_n_mobile_pids` participants had mobile minutes in at least one analysed person-wave, and `r txt_reg_pct_mobile_pw`% of the analysed person-waves had any. Under primary attribution, each game's full playtime counts towards its first IGDB genre label that remains in the 14-genre taxonomy (Appendix B), so genre exposures are mutually exclusive. Each H1 model has a random intercept and a correlated random slope for within-person playtime, as preregistered, and was fitted by restricted maximum likelihood; each H2 model was fitted by maximum likelihood with a random intercept, because the preregistered uncorrelated random slopes gave a singular fit in both H2 analyses (table note). H1 verdicts follow the preregistered decision grid of the Stage 1 Design Table, applied to the lower (LB) and upper (UB) bounds of the 90% confidence interval: LB \> 0.06 or UB \< −0.06 indicates a practically significant positive or negative association; LB \> 0 and UB \> 0.06, or UB \< 0 and LB \< −0.06, a positive or negative association that may be practically significant; LB \> 0 and UB \< 0.06, or UB \< 0 and LB \> −0.06, a positive or negative association that is not practically significant; LB \> −0.06 and UB \< 0.06 with an interval that covers zero, no practically significant association; and an interval that covers zero and one or both bounds, an inconclusive result. The Design Table lists the absence of a practically significant association for every interval inside ±0.06, including those that exclude zero, and we applied the more specific classes to the latter; it also gives the first bound as LB \> −0.06, which we read as LB \> 0.06, the counterpart of UB \< −0.06. H2 is supported if the joint test rejects equality at α = .05.
 
 ::: {.place arguments="auto, scope: \"parent\", float: true"}
 ```{r}
 #| label: tbl-frequentist-registered
-#| tbl-cap: "Preregistered frequentist analyses on the analytic sample, under the preregistered specifications, and on the earlier sample (D7). H1 rows: within-person (H1a) and between-person (H1b) total-playtime coefficients in SWEMWBS points per hour/day with Wald 90% confidence intervals, classified by the preregistered decision grid (SESOI ±0.06; text above the table). H2 rows: joint Wald tests of the equality of the 14 within-person (H2a) and the 14 between-person (H2b) genre coefficients, with the SD of the 14 coefficient estimates as a descriptive summary."
+#| tbl-cap: "Preregistered frequentist analyses on the analytic sample and under the preregistered specifications. H1 rows: within-person (H1a) and between-person (H1b) total-playtime coefficients in SWEMWBS points per hour/day with Wald 90% confidence intervals, classified by the preregistered decision grid (SESOI ±0.06; text above the table). H2 rows: joint Wald tests of the equality of the 14 within-person (H2a) and the 14 between-person (H2b) genre coefficients, with the SD of the 14 coefficient estimates as a descriptive summary."
 #| echo: false
 
-reg_spec_h1 <- c("Analytic sample, console/PC", "All five platforms (D4)",
-                 "Earlier sample (D7)")
-reg_spec_h2 <- c("Analytic sample, full attribution", "Primary attribution (D1)",
-                 "Earlier sample (D7)")
-reg_h1_rows <- bind_rows(reg_h1_main, reg_h1_allplat, reg_h1_v121) |>
+reg_spec_h1 <- c("Analytic sample, console/PC", "All five platforms (D4)")
+reg_spec_h2 <- c("Analytic sample, full attribution", "Primary attribution (D1)")
+reg_h1_rows <- bind_rows(reg_h1_main, reg_h1_allplat) |>
   mutate(Specification = rep(reg_spec_h1, each = 2),
          Test = ifelse(term == "within", "H1a", "H1b"),
          Result = sprintf("%.4f [%.4f, %.4f]", estimate, lo, hi),
          p = "", `Genre SD` = "")
-reg_h2_rows <- bind_rows(reg_h2_main, reg_h2_primary, reg_h2_v121) |>
+reg_h2_rows <- bind_rows(reg_h2_main, reg_h2_primary) |>
   mutate(Specification = rep(reg_spec_h2, each = 2),
          Test = ifelse(term == "within", "H2a", "H2b"),
          Result = sprintf("χ²(%d) = %.1f", df, chisq),
@@ -4380,13 +4301,13 @@ bind_rows(reg_h1_rows, reg_h2_rows) |>
     `Preregistered verdict` = verdict
   ) |>
   tt(notes = sprintf(
-    "Analytic sample: qualified participants with at least one valid SWEMWBS (Open Play v1.2.6). Earlier sample: participants with at least one valid SWEMWBS in Open Play v1.2.1, before the correction of Deviation D7. H1 models: random intercept and correlated random slope for within-person playtime, fitted by restricted maximum likelihood. H2 models: random intercept, fitted by maximum likelihood; the preregistered structure with uncorrelated random slopes for the 14 within-person genre exposures is singular in all three H2 analyses, with %d (analytic sample, full attribution), %d (primary attribution) and %d (earlier sample) of the 14 slope SDs estimated at zero. Genre SD: SD of the 14 genre coefficient estimates, which includes their estimation error.",
-    reg_slopes_n_zero, reg_slopes_primary$n_zero, reg_slopes_v121$n_zero)) |>
+    "Analytic sample: qualified participants with at least one valid SWEMWBS (Open Play v1.3.0). H1 models: random intercept and correlated random slope for within-person playtime, fitted by restricted maximum likelihood. H2 models: random intercept, fitted by maximum likelihood; the preregistered structure with uncorrelated random slopes for the 14 within-person genre exposures is singular in both H2 analyses, with %d (analytic sample, full attribution) and %d (primary attribution) of the 14 slope SDs estimated at zero. Genre SD: SD of the 14 genre coefficient estimates, which includes their estimation error.",
+    reg_slopes_n_zero, reg_slopes_primary$n_zero)) |>
   style_tt(fontsize = 0.8)
 ```
 :::
 
-Under the preregistered grid, the within-person coefficient on the analytic sample, `r txt_reg_w_main` `r txt_reg_w_main_ci`, showed no practically significant association, and the between-person coefficient, `r txt_reg_b_main` `r txt_reg_b_main_ci`, a negative association that is not practically significant: its interval excluded zero but lay inside ±0.06. The earlier sample gave the same two verdicts. Mobile play made up `r txt_reg_pct_mobile_time`% of all-platform playtime in the analysed person-waves. With it included, the within-person verdict was unchanged, and the between-person interval, `r txt_reg_b_allplat` `r txt_reg_b_allplat_ci`, included zero, so this coefficient showed no practically significant association. None of the `r nrow(reg_h1_all)` H1 rows showed an association that is, or may be, practically significant. On the analytic sample under full attribution, the within-person joint test rejected the equality of the genre coefficients (*p* = `r txt_reg_p_main_a`) and the between-person test did not (*p* = `r txt_reg_p_main_b`), so H2a was supported and H2b was not; the earlier sample gave the same decisions (*p* = `r txt_reg_p_v121_a` and *p* = `r txt_reg_p_v121_b`). Under the preregistered primary-genre attribution, neither test rejected equality (within: χ²(`r txt_reg_df_primary`) = `r txt_reg_chisq_primary_a`, *p* = `r txt_reg_p_primary_a`; between: χ²(`r txt_reg_df_primary`) = `r txt_reg_chisq_primary_b`, *p* = `r txt_reg_p_primary_b`), so the support for H2a depended on the attribution rule. Primary attribution assigns each multi-genre game to a single genre, which leaves genres that are seldom listed first with few players: `r txt_reg_rare_label` was the primary genre of games played by `r txt_reg_rare_n_primary` participants, whereas `r txt_reg_rare_n_full` participants played games carrying the label. Its between-person coefficient had a standard error of `r txt_reg_rare_se`, and the SD of the other 13 between-person coefficients was `r txt_reg_sd_primary_b_wo`, so the between-person SD of `r txt_reg_sd_primary_b` under primary attribution reflected the estimation error of this genre rather than a spread across genres.
+Under the preregistered grid, both H1 coefficients on the analytic sample showed no practically significant association (within persons: `r txt_reg_w_main` `r txt_reg_w_main_ci`; between persons: `r txt_reg_b_main` `r txt_reg_b_main_ci`): each interval included zero and lay inside ±0.06. Mobile play made up `r txt_reg_pct_mobile_time`% of all-platform playtime in the analysed person-waves. With it included, both verdicts were unchanged (between persons: `r txt_reg_b_allplat` `r txt_reg_b_allplat_ci`). None of the `r nrow(reg_h1_all)` H1 rows showed an association that is, or may be, practically significant. On the analytic sample under full attribution, the within-person joint test rejected the equality of the genre coefficients (*p* = `r txt_reg_p_main_a`) and the between-person test did not (*p* = `r txt_reg_p_main_b`), so H2a was supported and H2b was not. Under the preregistered primary-genre attribution, neither test rejected equality (within: χ²(`r txt_reg_df_primary`) = `r txt_reg_chisq_primary_a`, *p* = `r txt_reg_p_primary_a`; between: χ²(`r txt_reg_df_primary`) = `r txt_reg_chisq_primary_b`, *p* = `r txt_reg_p_primary_b`), so the support for H2a depended on the attribution rule. Primary attribution assigns each multi-genre game to a single genre, which leaves genres that are seldom listed first with few players: `r txt_reg_rare_label` was the primary genre of games played by `r txt_reg_rare_n_primary` participants, whereas `r txt_reg_rare_n_full` participants played games carrying the label. Its between-person coefficient had a standard error of `r txt_reg_rare_se`, and the SD of the other 13 between-person coefficients was `r txt_reg_sd_primary_b_wo`, so the between-person SD of `r txt_reg_sd_primary_b` under primary attribution reflected the estimation error of this genre rather than a spread across genres.
 
 ## Demographic Covariates
 
@@ -4938,7 +4859,7 @@ M1, the model with total playtime only, showed the highest expected log predicti
 
 Local time was taken from each participant's reported timezone; Xbox sessions recorded with date-only timestamps (8% of sessions) had their minutes spread uniformly over the recorded day. Exclusions from the analysed daily sample were dominated by days without telemetry coverage; excluded responses entered an all-responses sensitivity refit that retains every response and scores unobserved play as zero. Between-person terms are habitual full-day hours, a participant's total telemetry over their observed diary period divided by days. The SESOI for the slider and the choice of its minimally important difference are described in Methods (Daily Timescale).
 
-Four sensitivity refits accompany the exploratory daily analysis. Allowing first-order autocorrelated residuals with a within-person day trend (estimated AR(1) = `r txt_d_ar1`) widened the within-person interval past zero (β = `r txt_d_r1a_b1`, 95% CI \[`r txt_d_r1a_b1_ci_lo`, `r txt_d_r1a_b1_ci_hi`\]), as did adjusting for window length (β = `r txt_d_r1w_b1`, 95% CI \[`r txt_d_r1w_b1_ci_lo`, `r txt_d_r1w_b1_ci_hi`\]). Excluding the 8% of Xbox sessions recorded with date-only timestamps, whose start times were floored to midnight and whose minutes were spread uniformly over the recorded day, left the within-person interval above zero (β = `r txt_d_rx_b1`, 95% CI \[`r txt_d_rx_b1_ci_lo`, `r txt_d_rx_b1_ci_hi`\]). The all-responses refit, which retains every diary response and scores unobserved play as zero, gave the same between-person lean as the analysed sample (β = `r txt_d_r1f_b2`, 95% CI \[`r txt_d_r1f_b2_ci_lo`, `r txt_d_r1f_b2_ci_hi`\]). One qualification applies to the daily genre-level intervals: they inherit the exchangeable-residual assumption that the autocorrelation refit relaxes for the total-playtime model only. Like M3, the daily hierarchical-prior model was estimated in non-centred form; with the same sampler settings as M3 it produced `r txt_d_m3_divs` divergent transition`r if (d_r3$divs == 1) '' else 's'`, against `r d_m3_divs_centred` in the centred form at the stricter adapt_delta of 0.9995.
+Four sensitivity refits accompany the exploratory daily analysis. Allowing first-order autocorrelated residuals with a within-person day trend (estimated AR(1) = `r txt_d_ar1`) widened the within-person interval past zero (β = `r txt_d_r1a_b1`, 95% CI \[`r txt_d_r1a_b1_ci_lo`, `r txt_d_r1a_b1_ci_hi`\]), as did adjusting for window length (β = `r txt_d_r1w_b1`, 95% CI \[`r txt_d_r1w_b1_ci_lo`, `r txt_d_r1w_b1_ci_hi`\]). Excluding the 8% of Xbox sessions recorded with date-only timestamps, whose start times were floored to midnight and whose minutes were spread uniformly over the recorded day, left the within-person interval above zero (β = `r txt_d_rx_b1`, 95% CI \[`r txt_d_rx_b1_ci_lo`, `r txt_d_rx_b1_ci_hi`\]). The all-responses refit, which retains every diary response and scores unobserved play as zero, gave the same between-person lean as the analysed sample (β = `r txt_d_r1f_b2`, 95% CI \[`r txt_d_r1f_b2_ci_lo`, `r txt_d_r1f_b2_ci_hi`\]). One qualification applies to the daily genre-level intervals: they inherit the exchangeable-residual assumption that the autocorrelation refit relaxes for the total-playtime model only. Like M3, the daily hierarchical-prior model was estimated in non-centred form; with the same sampler settings as M3 it produced `r txt_d_m3_divs` divergent transition`r if (d_r3$divs == 1) '' else 's'`, whereas the centred form had produced many in earlier fits, even at the stricter adapt_delta of 0.9995.
 
 # Appendix E: Hypothesis Test Summaries {.appendix}
 
@@ -5125,7 +5046,7 @@ $$\begin{aligned}
 \beta_W, \beta_B &\propto 1
 \end{aligned}$$
 
-In this and the following equations, $i$ indexes biweekly survey waves, $j$ participants, and, from M2 onwards, $g$ genres. $\text{Time}_{\text{within},ij}$ is participant $j$'s average daily playtime on Nintendo, Xbox, and Steam (hours per day over the 14 days before wave $i$'s scheduled survey) minus that participant's mean across all of their survey waves, and $\text{Time}_{\text{between},j}$ is that mean; the mean also covers the `r n_swemwbs_incomplete` waves with an incomplete SWEMWBS, which do not enter the models. $\alpha$, $\beta_W$, and $\beta_B$ are the population intercept and slopes; $u_{0j}$ and $u_{1j}$ are participant $j$'s deviations from $\alpha$ and $\beta_W$, so that participant $j$'s own intercept is $\alpha + u_{0j}$ and own within-person slope is $\beta_W + u_{1j}$; $\boldsymbol{\Sigma}_u$ is the covariance matrix of these deviations, with standard deviations $\sigma_{u0}$ and $\sigma_{u1}$ and correlation $\rho_u$; $\sigma$ is the residual standard deviation; $\tilde{y}$ is the sample median of SWEMWBS; and $\propto 1$ denotes an improper flat prior.
+In this and the following equations, $i$ indexes biweekly survey waves, $j$ participants, and, from M2 onwards, $g$ genres. $\text{Time}_{\text{within},ij}$ is participant $j$'s average daily playtime on Nintendo, Xbox, and Steam (hours per day over the 14 days before wave $i$'s scheduled survey) minus that participant's mean across all of their survey waves, and $\text{Time}_{\text{between},j}$ is that mean. $\alpha$, $\beta_W$, and $\beta_B$ are the population intercept and slopes; $u_{0j}$ and $u_{1j}$ are participant $j$'s deviations from $\alpha$ and $\beta_W$, so that participant $j$'s own intercept is $\alpha + u_{0j}$ and own within-person slope is $\beta_W + u_{1j}$; $\boldsymbol{\Sigma}_u$ is the covariance matrix of these deviations, with standard deviations $\sigma_{u0}$ and $\sigma_{u1}$ and correlation $\rho_u$; $\sigma$ is the residual standard deviation; $\tilde{y}$ is the sample median of SWEMWBS; and $\propto 1$ denotes an improper flat prior.
 
 ## M2 specification: Independent Genre Coefficients
 
@@ -5156,7 +5077,7 @@ u_{0j} &\sim \text{Normal}(0, \sigma_{u0}) \\
 \alpha &\sim \text{Student-}t(3, \tilde{y}, 2.5)
 \end{aligned}$$
 
-The symbols are as in M2. $\gamma_W$ and $\gamma_B$ are the centres and $\tau_{\text{within}}$ and $\tau_{\text{between}}$ the standard deviations of the distributions from which the within-person and between-person genre coefficients are drawn. $\gamma_W$ and $\gamma_B$ receive the same improper flat prior as the slopes in M1 and M2, and $\tau_{\text{within}}$ and $\tau_{\text{between}}$ describe the size of the genre differences in the within-person (H2a) and between-person (H2b) dimensions. Because the centred form of this model, in which the sampler draws each genre coefficient directly from its normal distribution, produced `r h2_hier_divs_centred` divergent transitions, we estimate it in the equivalent non-centred form $\beta_{W,g} = \gamma_W + \tau_{\text{within}}\, z_{W,g}$ and $\beta_{B,g} = \gamma_B + \tau_{\text{between}}\, z_{B,g}$, with $z_{W,g}, z_{B,g} \sim \text{Normal}(0, 1)$. In `brms` this is a model with slopes $\gamma_W$ and $\gamma_B$ on the summed genre exposures plus two genre-level random terms weighted by the genre exposures (the multi-membership construction that M4 also uses); it changes neither the likelihood nor the priors on $\gamma$ and $\tau$.
+The symbols are as in M2. $\gamma_W$ and $\gamma_B$ are the centres and $\tau_{\text{within}}$ and $\tau_{\text{between}}$ the standard deviations of the distributions from which the within-person and between-person genre coefficients are drawn. $\gamma_W$ and $\gamma_B$ receive the same improper flat prior as the slopes in M1 and M2, and $\tau_{\text{within}}$ and $\tau_{\text{between}}$ describe the size of the genre differences in the within-person (H2a) and between-person (H2b) dimensions. Because the centred form of this model, in which the sampler draws each genre coefficient directly from its normal distribution, produced dozens of divergent transitions in earlier fits, we estimate it in the equivalent non-centred form $\beta_{W,g} = \gamma_W + \tau_{\text{within}}\, z_{W,g}$ and $\beta_{B,g} = \gamma_B + \tau_{\text{between}}\, z_{B,g}$, with $z_{W,g}, z_{B,g} \sim \text{Normal}(0, 1)$. In `brms` this is a model with slopes $\gamma_W$ and $\gamma_B$ on the summed genre exposures plus two genre-level random terms weighted by the genre exposures (the multi-membership construction that M4 also uses); it changes neither the likelihood nor the priors on $\gamma$ and $\tau$.
 
 ## M4 specification: Multi-Membership
 
@@ -5183,7 +5104,7 @@ The participant terms are as in M1. $w_{g,ij}$ is genre $g$'s exposure hours in 
 #| cache: false
 
 # M4 parameter recovery under the final specification (R/sim_mm_recovery.R,
-# run 2026-10-14 with SIM_REPS=20, SIM_ITER=8000). The engine purls the
+# run 2026-10-18 on Open Play v1.3.0 with SIM_REPS=20, SIM_ITER=8000). The engine purls the
 # manuscript's own M4 chunks, so the fitted model is the manuscript's model.
 sim_rec  <- read_csv(here("data/processed/sim_recovery/recovery_summary.csv"),
                      show_col_types = FALSE)

@@ -29,6 +29,12 @@
 # Usage (from the repo root):
 #   Rscript R/sim_mm_recovery.R
 #   SIM_RENDER=1 Rscript R/sim_mm_recovery.R      # also renders the report (html)
+# Two processes can share the replications (about 20 min each at 8000
+# iterations), e.g. in two terminals:
+#   SIM_REPS=20 SIM_ITER=8000 SIM_REP_RANGE=1:10  SIM_RENDER=1 Rscript R/sim_mm_recovery.R
+#   SIM_REPS=20 SIM_ITER=8000 SIM_REP_RANGE=11:20 SIM_RENDER=1 Rscript R/sim_mm_recovery.R
+# Whichever process finds all SIM_REPS replications on disk writes the
+# summary files and renders the report; the other exits with status 0.
 #
 # Environment switches:
 #   SIM_REPS           number of replications (default 1, as in the
@@ -42,6 +48,12 @@
 #   SIM_STANCODE_ONLY  1 = build replication 1, write its Stan code and default
 #                      priors, and stop before any sampling.
 #   SIM_RENDER         1 = render R/sim_mm_recovery_report.qmd to html at the end.
+#   SIM_REP_RANGE      "a:b" = fit only replications a..b (1 <= a <= b <=
+#                      SIM_REPS), so that several processes can share the
+#                      replications. The summary files and the report are
+#                      written only when all SIM_REPS replication files exist;
+#                      otherwise the run says which are missing and exits 0.
+#                      Default: all replications.
 #
 # Outputs (SIM_OUT_DIR):
 #   reps/rep_NNN.rds        per replication: summaries, genre-level estimates,
@@ -63,6 +75,12 @@ suppressPackageStartupMessages({
 here::i_am("R/sim_mm_recovery.R")
 setwd(here())
 
+# Stan backend, as in the manuscript's setup chunk (which this script does not
+# evaluate): CmdStan through cmdstanr with 3 threads per chain. Computation
+# time only; the h2-mm-fit chunk code is used unchanged.
+stopifnot(requireNamespace("cmdstanr", quietly = TRUE))
+options(brms.backend = "cmdstanr", brms.threads = brms::threading(3))
+
 ts  <- function() format(Sys.time(), "%Y-%m-%d %H:%M:%S")
 say <- function(...) message(sprintf("[%s] %s", ts(), sprintf(...)))
 
@@ -78,7 +96,32 @@ out_dir       <- Sys.getenv("SIM_OUT_DIR", here("data/processed/sim_recovery"))
 stancode_only <- identical(Sys.getenv("SIM_STANCODE_ONLY"), "1")
 do_render     <- identical(Sys.getenv("SIM_RENDER"), "1")
 stopifnot(n_reps >= 1, sim_iter >= 1000)
+rep_range_env <- trimws(Sys.getenv("SIM_REP_RANGE", ""))
+if (nzchar(rep_range_env)) {
+  m <- regmatches(rep_range_env,
+                  regexec("^([0-9]+)[[:space:]]*:[[:space:]]*([0-9]+)$", rep_range_env))[[1]]
+  if (length(m) != 3) stop("SIM_REP_RANGE must look like 1:10, got '", rep_range_env, "'")
+  rep_from <- as.integer(m[2])
+  rep_to   <- as.integer(m[3])
+  if (!(rep_from >= 1L && rep_from <= rep_to && rep_to <= n_reps)) {
+    stop(sprintf("SIM_REP_RANGE=%s must satisfy 1 <= a <= b <= SIM_REPS (%d)",
+                 rep_range_env, n_reps))
+  }
+  rep_range <- seq(rep_from, rep_to)
+} else {
+  rep_range <- seq_len(n_reps)
+}
 dir.create(file.path(out_dir, "reps"), recursive = TRUE, showWarnings = FALSE)
+
+# Write through a temporary file and rename it into place, so that a process
+# sharing out_dir (SIM_REP_RANGE) or a resumed run never reads a half-written
+# file.
+write_atomic <- function(path, writer) {
+  tmp <- sprintf("%s.tmp-%d", path, Sys.getpid())
+  writer(tmp)
+  if (!file.rename(tmp, path)) stop("could not move ", tmp, " to ", path)
+  invisible(path)
+}
 
 # --- True values ---------------------------------------------------------------
 # Scale: SWEMWBS item mean (1-5). Values carried over from the pre-2026-10-13
@@ -86,7 +129,7 @@ dir.create(file.path(out_dir, "reps"), recursive = TRUE, showWarnings = FALSE)
 n_persons <- 200L
 n_waves   <- 6L
 truth <- list(
-  intercept       = 3.32,   # real-data mean SWEMWBS (was 3, the scale midpoint)
+  intercept       = 3.32,   # real-data mean SWEMWBS (v1.3.0: 3.322; was 3, the scale midpoint)
   beta_within     = 0,
   beta_between    = -0.015,
   sigma_u0        = 0.6,    # person intercept SD
@@ -99,20 +142,27 @@ truth <- list(
 )
 
 # The 14 genre slugs of the real data (chunk model-data), with the share of
-# real fitted person-waves (v1.2.6, N = 6,293) that include play in each genre.
+# real fitted person-waves (v1.3.0, N = 6,518) that include play in each genre.
+# The constants below were computed on 2026-10-17 from the analytic sample, as
+# in chunks model-data and mm-data-setup; the v1.2.6 values (N = 6,293) are in
+# data/archive/processed_v126/sim_recovery/run_info.rds.
 genre_share <- c(
-  adventure = 0.590, arcade = 0.151, fighting = 0.084,
-  hack_and_slash_beat_em_up = 0.102, platform = 0.167, point_and_click = 0.027,
-  puzzle = 0.253, racing = 0.098, role_playing_rpg = 0.516, shooter = 0.454,
-  simulator = 0.455, sport = 0.119, strategy = 0.530, visual_novel = 0.041
+  adventure = 0.579, arcade = 0.151, fighting = 0.085,
+  hack_and_slash_beat_em_up = 0.100, platform = 0.171, point_and_click = 0.026,
+  puzzle = 0.249, racing = 0.101, role_playing_rpg = 0.508, shooter = 0.447,
+  simulator = 0.448, sport = 0.117, strategy = 0.521, visual_novel = 0.039
 )
-p_labelled   <- 0.846  # real share of person-waves with genre-labelled play
-p_unlabelled <- 0.007  # play without any genre label (real: 0.012 of waves);
-                       # halved so the chunk guard (< 10% of uniform-weight
-                       # waves with play) rarely fails. It still failed for
-                       # 4 of the first 150 replications (e.g. replication 10),
-                       # so build_replication() redraws such inputs.
-p_missing_y  <- 0.006  # waves with an incomplete SWEMWBS (real: 0.0055)
+p_labelled   <- 0.835  # real share of person-waves with genre-labelled play
+p_unlabelled <- 0.008  # play without any genre label (real: 0.013 of waves,
+                       # 0.015 of waves with play); half the latter rate, so
+                       # the chunk guard (< 10% of uniform-weight waves with
+                       # play) rarely fails. It still fails for 5 of the
+                       # first 150 input draws (4 with the v1.2.6 constants,
+                       # e.g. replication 10), so build_replication() redraws
+                       # such inputs.
+p_missing_y  <- 0      # waves with an incomplete SWEMWBS (real: none of the
+                       # 6,518 in v1.3.0, which ships no unanswered SWEMWBS;
+                       # 0.0055 in v1.2.6)
 
 # --- Manuscript chunks -------------------------------------------------------
 ms_path   <- here("manuscript.qmd")
@@ -130,8 +180,8 @@ labels <- vapply(chunks, function(code) {
 names(chunks) <- labels
 use_labels <- c("model-data", "mm-data-setup", "mm-formula-setup", "h2-mm-fit")
 stopifnot(all(use_labels %in% labels))
-writeLines(unlist(lapply(use_labels, function(l) c(sprintf("## ---- %s", l), chunks[[l]], ""))),
-           file.path(out_dir, "chunks_used.R"))
+chunks_txt <- unlist(lapply(use_labels, function(l) c(sprintf("## ---- %s", l), chunks[[l]], "")))
+write_atomic(file.path(out_dir, "chunks_used.R"), function(p) writeLines(chunks_txt, p))
 chunk_md5 <- unname(tools::md5sum(file.path(out_dir, "chunks_used.R")))
 say("manuscript.qmd md5 %s; chunks %s md5 %s", ms_md5, paste(use_labels, collapse = ", "),
     chunk_md5)
@@ -291,12 +341,14 @@ param_table <- function(mm_group) {
 b1 <- build_replication(1L)
 sc_call <- as.call(c(quote(brms::make_stancode),
                      as.list(brm_call)[c("formula", "data", "family")]))
-writeLines(eval(sc_call, envir = b1$env), file.path(out_dir, "stancode_sim_m4.stan"))
+stancode <- eval(sc_call, envir = b1$env)
+write_atomic(file.path(out_dir, "stancode_sim_m4.stan"), function(p) writeLines(stancode, p))
 dp_call <- sc_call
 dp_call[[1]] <- quote(brms::default_prior)
 names(dp_call)[names(dp_call) == "formula"] <- "object"  # default_prior()'s first argument
 dp <- eval(dp_call, envir = b1$env)
-write_csv(as_tibble(as.data.frame(dp)), file.path(out_dir, "default_prior_sim_m4.csv"))
+write_atomic(file.path(out_dir, "default_prior_sim_m4.csv"),
+             function(p) write_csv(as_tibble(as.data.frame(dp)), p))
 say("replication 1: %d fitted rows, %d uniform-weight waves (%d with play); mm group %s",
     b1$n_obs, b1$n_uniform, b1$n_uniform_play, b1$env$mm_group_name)
 
@@ -307,7 +359,7 @@ run_info <- c(settings, list(
   brms_version = as.character(packageVersion("brms")), n_reps_requested = n_reps,
   settings_key = settings_key
 ))
-saveRDS(run_info, file.path(out_dir, "run_info.rds"))
+write_atomic(file.path(out_dir, "run_info.rds"), function(p) saveRDS(run_info, p))
 
 if (stancode_only) {
   say("SIM_STANCODE_ONLY=1: wrote Stan code and default priors to %s; no sampling", out_dir)
@@ -317,7 +369,8 @@ if (stancode_only) {
 # --- Replications --------------------------------------------------------------
 rep_file <- function(rep) file.path(out_dir, "reps", sprintf("rep_%03d.rds", rep))
 
-for (rep in seq_len(n_reps)) {
+say("replications to run in this process: %d-%d of %d", min(rep_range), max(rep_range), n_reps)
+for (rep in rep_range) {
   f <- rep_file(rep)
   if (file.exists(f)) {
     old <- readRDS(f)
@@ -376,9 +429,9 @@ for (rep in seq_len(n_reps)) {
                                   error = function(e) NA_real_),
     wall_minutes = wall_min
   )
-  saveRDS(list(settings_key = settings_key, recovery = rec, genre = genre_rec,
-               hyper_draws = hyper_draws, diagnostics = diag),
-          f)
+  write_atomic(f, function(p) saveRDS(list(settings_key = settings_key, recovery = rec,
+                                            genre = genre_rec, hyper_draws = hyper_draws,
+                                            diagnostics = diag), p))
   say("replication %d: done in %.1f min; %d of %d parameters covered; %d divergent; max R-hat %.3f",
       rep, wall_min, sum(rec$covered), nrow(rec), diag$n_divergent, diag$max_rhat)
   rm(fit, draws, re, re_all)
@@ -386,7 +439,38 @@ for (rep in seq_len(n_reps)) {
 }
 
 # --- Aggregate -----------------------------------------------------------------
+# Only the run that finds every replication on disk writes the summaries and
+# renders the report (with SIM_REP_RANGE, the process that finishes last).
+missing_reps <- which(!file.exists(vapply(seq_len(n_reps), rep_file, character(1))))
+if (length(missing_reps)) {
+  say("%d of %d replications are not on disk yet (missing: %s); the summary and the report are left to the run that completes the last one",
+      length(missing_reps), n_reps, paste(missing_reps, collapse = ", "))
+  quit(save = "no", status = 0)
+}
+# One writer at a time: a lock directory holding the writer's pid (a lock left
+# by a process that no longer runs is removed).
+lock_dir <- file.path(out_dir, "aggregate.lock")
+if (!dir.create(lock_dir, showWarnings = FALSE)) {
+  holder <- suppressWarnings(as.integer(readLines(file.path(lock_dir, "pid"), warn = FALSE)[1]))
+  if (!is.na(holder) && isTRUE(tools::pskill(holder, 0L))) {
+    say("process %d is already writing the summary and the report; nothing left to do", holder)
+    quit(save = "no", status = 0)
+  }
+  unlink(lock_dir, recursive = TRUE)
+  if (!dir.create(lock_dir, showWarnings = FALSE)) stop("could not create ", lock_dir)
+}
+writeLines(as.character(Sys.getpid()), file.path(lock_dir, "pid"))
+
 reps <- lapply(seq_len(n_reps), function(r) readRDS(rep_file(r)))
+# Files outside this process's SIM_REP_RANGE were not checked in the loop.
+other_settings <- which(!vapply(reps, function(x) identical(x$settings_key, settings_key),
+                                logical(1)))
+if (length(other_settings)) {
+  unlink(lock_dir, recursive = TRUE)
+  stop(sprintf(paste0("replication file(s) %s were written with other settings (or other ",
+                      "manuscript chunks). Move %s/reps aside and re-run."),
+               paste(other_settings, collapse = ", "), out_dir))
+}
 by_rep <- bind_rows(lapply(reps, `[[`, "recovery"))
 write_csv(by_rep, file.path(out_dir, "recovery_by_rep.csv"))
 write_csv(bind_rows(lapply(reps, `[[`, "genre")), file.path(out_dir, "genre_recovery.csv"))
@@ -414,6 +498,10 @@ say("wrote %s (%d parameters, %d replications)", file.path(out_dir, "recovery_su
 if (do_render) {
   say("rendering R/sim_mm_recovery_report.qmd (html)")
   status <- system2("quarto", c("render", "R/sim_mm_recovery_report.qmd", "--to", "html"))
-  if (status != 0) stop("quarto render failed")
+  if (status != 0) {
+    unlink(lock_dir, recursive = TRUE)
+    stop("quarto render failed")
+  }
 }
+unlink(lock_dir, recursive = TRUE)
 say("sim_mm_recovery.R finished")

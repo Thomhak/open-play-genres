@@ -32,6 +32,8 @@ data/processed/*
 !data/processed/sim_recovery/
 data/processed/sim_recovery/reps/
 data/processed/sim_recovery/run_info.rds
+data/processed/sim_recovery/aggregate.lock/
+data/processed/sim_recovery/*.tmp-*
 
 # Bayesian model fits (brms; large, local only)
 models/
@@ -66,7 +68,7 @@ R/01_preprocess_prereg.R
 
 # Dev tooling (local only), except the scripts the pipeline and CLAUDE.md rely on
 scripts/*
-!scripts/refit_v126.sh
+!scripts/refit_v130.sh
 !scripts/zotero_digest.py
 !scripts/docx_changes.py
 !scripts/prep_daily_positive_control.R
@@ -100,6 +102,8 @@ analysis_plan_daily.md
 
 # Co-author review copies with tracked changes/comments (docs/ is published to GitHub Pages)
 docs/manuscript_v*.docx
+# ...except the build output of manuscript_v43.qmd (co-author copies now live in reviews/)
+!docs/manuscript_v43.docx
 
 # Model-written literature digests derived from Zotero PDFs (local only)
 literature/
@@ -115,3 +119,9 @@ docs/manuscript_files/
 manuscript_conventional.qmd
 manuscript_conventional_files/
 docs/manuscript_conventional.docx
+
+# Local-only folders created by the 2026-10-18 clean-up (see their README files)
+archive/
+reviews/
+reference/
+data/archive/

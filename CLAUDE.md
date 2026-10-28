@@ -13,13 +13,13 @@ The study examines whether genre-level playtime (from digital trace data) relate
 
 **Pre-registration PDF:** `pre-registration/Ballou_etal_IPA (1).pdf`
 **Pre-registration code (synthetic data):** `pre-registration/4_genres.qmd`
-**Open Play data paper:** `open_play/index.qmd` (dataset descriptor) and `open_play/data-process.qmd` (cleaning pipeline)
+**Open Play data paper:** `reference/open_play_v1.3.0/index.qmd` (dataset descriptor) and `reference/open_play_v1.3.0/data-process.qmd` (cleaning pipeline), copied from the v1.3.0 archive (local only)
 **Demographics paper:** `demographics paper/index.qmd` (Ballou, descriptive analysis using same data + genres)
 **Earlier iteration:** `/Users/thomashakman/Projects/Academic/open-play-genres/` (previous repo structure, same analysis)
 
 ## Key Context: Open Play Data Paper
 
-The Open Play data paper was published first and documents what actually happened during data collection. The **clean data files** that the Makefile downloads (`data/clean/`) are the output of `open_play/data-process.qmd`. Critical things the data paper reveals:
+The Open Play data paper was published first and documents what actually happened during data collection. The **clean data files** that the Makefile downloads (`data/clean/`) are the output of the release's `data-process.qmd` (copy in `reference/open_play_v1.3.0/`). Critical things the data paper reveals:
 
 ### What the clean data already has
 The following pre-registered exclusions are **already applied** in the clean data before this repo's analysis code runs:
@@ -42,10 +42,10 @@ The pre-registration text says "WEMWBS" (Tennant et al., 2007) but the Open Play
 
 **Priors: all brms defaults since 2026-10-13 (Matti: "defaults are fine"; "going beyond default priors is counterproductive"):**
 - Every brms model (M1–M4, the demographic refits, all daily models) uses the brms default priors: flat on `b`, `student_t(3, round(median(y), 1), S)` on the Intercept, half-`student_t(3, 0, S)` on sigma and every `sd` (including the M4/M4-D mm-group sd, σ_s), LKJ(1) on correlations, with `S = max(2.5, round(mad(y), 1))` (2.5 for SWEMWBS on 1–5; set by brms from life_sat for the daily models). No `set_prior()` on `b`, `Intercept` or `sd` anywhere.
-- M3/M3-D are pure brms since 2026-10-14 (non-centred form, no stanvars, no `set_prior()`): `wemwbs ~ sum_within + sum_between + (1 | pid) + (1 | mm(gW_1, ..., gW_14, weights = cbind(gh_*_within), scale = FALSE)) + (1 | mm(gB_1, ..., gB_14, weights = cbind(gh_*_between), scale = FALSE))`, where `gW_k`/`gB_k` are constant genre-factor columns (14 levels) and the weights are the exposures themselves (`scale = FALSE` is essential; within weights are signed). This is the same model as beta_g ~ Normal(gamma, tau): gamma = `b_sum_within`/`b_sum_between` (flat default), tau = `sd_<mm group>__Intercept` (default half-Student-t(3, 0, S); `tau_prior_scale` in chunk `h2-hier-fit` is read from `brms::default_prior()` and pinned at 2.5), and the per-genre coefficients are beta_g = b_sum + `r_<mm group>[g,Intercept]`, computed draw-wise by `hier_nc_draws()` (chunk `h2-hier-fit`; object `h2_hier_nc`; also used for M3-D in `daily-fits`). brms samples r = tau * z, which removes the funnel: the centred stanvars fits (`models/h2_hier_model_v3`, 68 divergences at adapt_delta 0.999; `models/daily/m3_daily_ls_v3`, 29 at 0.9995) are kept for comparison only (`notes/compare_m3_v3_v4.R`); both v4 fits run at adapt_delta 0.999. The only prior that moves is the default Intercept prior, which brms now places at the mean summed exposures with all genre deviations at zero.
-- No prior-sensitivity analysis (dropped from Appendix D and from `scripts/refit_v126.sh`); `R/03_prior_sensitivity.R` is superseded (stops on its first line).
+- M3/M3-D are pure brms since 2026-10-14 (non-centred form, no stanvars, no `set_prior()`): `wemwbs ~ sum_within + sum_between + (1 | pid) + (1 | mm(gW_1, ..., gW_14, weights = cbind(gh_*_within), scale = FALSE)) + (1 | mm(gB_1, ..., gB_14, weights = cbind(gh_*_between), scale = FALSE))`, where `gW_k`/`gB_k` are constant genre-factor columns (14 levels) and the weights are the exposures themselves (`scale = FALSE` is essential; within weights are signed). This is the same model as beta_g ~ Normal(gamma, tau): gamma = `b_sum_within`/`b_sum_between` (flat default), tau = `sd_<mm group>__Intercept` (default half-Student-t(3, 0, S); `tau_prior_scale` in chunk `h2-hier-fit` is read from `brms::default_prior()` and pinned at 2.5), and the per-genre coefficients are beta_g = b_sum + `r_<mm group>[g,Intercept]`, computed draw-wise by `hier_nc_draws()` (chunk `h2-hier-fit`; object `h2_hier_nc`; also used for M3-D in `daily-fits`). brms samples r = tau * z, which removes the funnel: the centred stanvars fits (`models/h2_hier_model_v3`, 68 divergences at adapt_delta 0.999; `models/daily/m3_daily_ls_v3`, 29 at 0.9995) are kept for comparison only (`notes/compare_m3_v3_v4.R`; the v1.3.0 refit moves them to `models/archive_v126/` and `models/daily/archive_v126/`); both v4 fits run at adapt_delta 0.999. The only prior that moves is the default Intercept prior, which brms now places at the mean summed exposures with all genre deviations at zero.
+- No prior-sensitivity analysis (dropped from Appendix D and from the refit driver, now `scripts/refit_v130.sh`); `R/03_prior_sensitivity.R` is superseded (stops on its first line).
 - History: until 2026-10-13 the priors were `student_t(3, 0, 0.5)` on b, `student_t(3, 3, 2)` on the Intercept, Half-Normal(0, 0.1) on τ, Normal(0, 0.3) on the mm sd (daily: these scales times r = SESOI_LS / 0.06). Disclosed in Appendix F (Priors) and D3 (after results were known).
-- M3 centres (since 2026-10-13, after Matti's comment C82): the genre coefficients are drawn from Normal(gamma_W, tau_within) and Normal(gamma_B, tau_between), with the centres estimated (v4 variables: gamma = `b_sum_*`, tau = `sd_<mm group>__Intercept`; the v3 names `mu_genre_*`/`tau_genre_*` exist only in the archived centred fit) (flat prior since the default switch). Previously the centres were fixed at zero. Fit files renamed so an older fit cannot be loaded: `models/h2_hier_model_v3` (was `_v2`), `models/daily/m3_daily_ls_v3` (was `_v2`), and since 2026-10-14 (non-centred form) `models/h2_hier_model_v4` and `models/daily/m3_daily_ls_v4`, the files the manuscript, `R/05_loo.R`, the supplement and `scripts/refit_v126.sh` use. `tau_share` (heterogeneity rule) depends on tau only; `tau_rope_out`/`tau_rope_out_b` use the estimated mu (`rope_out_mu()` in chunk `h2-hier-tau`)
+- M3 centres (since 2026-10-13, after Matti's comment C82): the genre coefficients are drawn from Normal(gamma_W, tau_within) and Normal(gamma_B, tau_between), with the centres estimated (v4 variables: gamma = `b_sum_*`, tau = `sd_<mm group>__Intercept`; the v3 names `mu_genre_*`/`tau_genre_*` exist only in the archived centred fit) (flat prior since the default switch). Previously the centres were fixed at zero. Fit files renamed so an older fit cannot be loaded: `models/h2_hier_model_v3` (was `_v2`), `models/daily/m3_daily_ls_v3` (was `_v2`), and since 2026-10-14 (non-centred form) `models/h2_hier_model_v4` and `models/daily/m3_daily_ls_v4`, the files the manuscript, `R/05_loo.R`, the supplement and `scripts/refit_v130.sh` use. `tau_share` (heterogeneity rule) depends on tau only; `tau_rope_out`/`tau_rope_out_b` use the estimated mu (`rope_out_mu()` in chunk `h2-hier-tau`)
 
 **Scale-related code changes elsewhere:**
 - `manuscript.qmd` line 881 previously had `filter(..., wemwbs >= 7)` which would silently drop every observation on the 1–5 scale — corrected to `wemwbs >= 1`
@@ -54,7 +54,7 @@ The pre-registration text says "WEMWBS" (Tennant et al., 2007) but the Open Play
 
 ### Clean data column names
 
-**`survey_biweekly.csv.gz`**: `pid`, `wave`, `date`, `wemwbs_1`–`wemwbs_7` (`ideal_baseline_day` was dropped upstream in v1.2.5; `R/00_baseline_days.R` restores it from the v1.2.1 file as `data/reference/baseline_days.csv`, joined in `load_survey_data()`), plus other measures (depression, life satisfaction, BANGS, displacement, self-reported playtime).
+**`survey_biweekly.csv.gz`**: `pid`, `wave`, `date`, `wemwbs_1`–`wemwbs_7` (`ideal_baseline_day` is not shipped since v1.2.5; `R/00_baseline_days.R` rebuilds it from the release's raw biweekly file `data/raw/survey_biweekly_raw.csv.gz` as `data/reference/baseline_days.csv`, joined in `load_survey_data()`), plus other measures (depression, life satisfaction, BANGS, displacement, self-reported playtime).
 
 **`nintendo.csv.gz`**: `pid`, `title_id`, `session_start`, `session_end`, `duration`, `device_type`, `operation_mode`. No genre column — must be fetched from IGDB by `title_id`.
 
@@ -121,7 +121,7 @@ Many games span multiple genres in IGDB (e.g., an action-RPG, a strategy-adventu
 
 ### Implementation
 - `R/01_preprocess.R` — new main pipeline (multi-genre)
-- `R/01_preprocess_prereg.R` — frozen pre-registered pipeline (primary genre only; still reads `ideal_baseline_day` and fails on v1.2.6 data without the sidecar join)
+- `R/01_preprocess_prereg.R` — frozen pre-registered pipeline (primary genre only; still reads `ideal_baseline_day` and fails on releases >= v1.2.5, v1.3.0 included, without the sidecar join)
 - The pre-registered analysis will appear in supplementary materials
 
 ### Structural consequences
@@ -135,7 +135,7 @@ This deviation must be clearly documented in the manuscript's Methods section un
 1. Primary genre only vs. all genres (up to 3)
 2. Why: IGDB multi-genre assignments reflect genuine cross-genre games
 3. Consequence: non-exclusive playtime counts; total playtime computed separately
-4. Pre-registered analyses (primary-genre attribution, all-platform H1, earlier sample) are reported in manuscript Appendix D, "Preregistered Frequentist Analysis" (`@tbl-frequentist-registered`), built by chunk `frequentist-registered` from `R/prep_primary_genre.R` and `R/prep_v121_sample.R` outputs (`01_preprocess_prereg.R` is frozen and unused: its taxonomy differs)
+4. Pre-registered analyses (primary-genre attribution, all-platform H1) are reported in manuscript Appendix D, "Preregistered Frequentist Analysis" (`@tbl-frequentist-registered`), built by chunk `frequentist-registered` from the `R/prep_primary_genre.R` output (`01_preprocess_prereg.R` is frozen and unused: its taxonomy differs)
 
 ## Discrepancies Between Pre-Registration and Current Manuscript
 
@@ -147,7 +147,7 @@ This deviation must be clearly documented in the manuscript's Methods section un
 | H1 equivalence CI level | 90% CI | ✅ Fixed — `conf_level = 0.90` |
 | H2 random effects | Random slopes `(\|\| pid)` | ⚠️ Pre-reg requires attempting; document if singular |
 | H1 platforms | All 5 | ℹ️ Main H1 uses Nintendo/Xbox/Steam (D4); the registered all-platform H1 model (mobile joined to the survey frame) is reported in Appendix D (`@tbl-frequentist-registered`) |
-| Wave assignment | Participant-specific `ideal_baseline_day` | ✅ Fixed — uses `ideal_baseline_day` from the committed sidecar `data/reference/baseline_days.csv` (column dropped in Open Play v1.2.5) |
+| Wave assignment | Participant-specific `ideal_baseline_day` | ✅ Fixed — uses `ideal_baseline_day` from the committed sidecar `data/reference/baseline_days.csv`, rebuilt by `R/00_baseline_days.R` from the release's own raw biweekly file (the clean files lack the column since v1.2.5; no v1.2.1 dependency) |
 | Missing data imputation | `mice`, complete-case + imputed | ❌ Not yet implemented |
 | Positive controls | 3 tests required | ✅ Implemented in manuscript |
 | 16h daily cap | Required | ✅ Already in clean data |
@@ -159,12 +159,12 @@ This deviation must be clearly documented in the manuscript's Methods section un
 manuscript.qmd                      # Main Quarto manuscript (intro, methods, analysis code, discussion)
 bibliography.bib                    # BibTeX references
 _quarto.yml                         # Quarto project config
-Makefile                            # Downloads Open Play v1.2.6 (Zenodo 22811439) into data/clean/
+Makefile                            # Downloads Open Play v1.3.0 (Zenodo 23419571) into data/clean/ (+ raw biweekly file into data/raw/)
 R/
+  00_baseline_days.R                # Baseline-day sidecar from the release's raw biweekly file -> data/reference/baseline_days.csv (run once after make data)
   01_preprocess.R                   # MAIN: Multi-genre preprocessing (deviation — all IGDB genres up to 3)
   01_preprocess_prereg.R            # FROZEN: Pre-registered version (older taxonomy; unused)
-  prep_primary_genre.R              # Primary-genre attribution (registered rule) -> data/processed/genre_wave_long_primary.csv (Appendix D)
-  prep_v121_sample.R                # Earlier sample (v1.2.1, D7) -> data/processed_v121/ (Appendix D; checks, never overwrites)
+  prep_primary_genre.R              # Primary-genre attribution (preregistered rule) -> data/processed/genre_wave_long_primary.csv (Appendix D)
   helpers.R                         # Table formatting utilities
 data/
   clean/                            # Open Play clean data (downloaded via Makefile; includes game_metadata.csv.gz)
@@ -172,32 +172,42 @@ data/
     genre_wave_long.csv             #   Long format: (pid, wave, genre, hours_per_day) — sessions count per genre
     total_playtime.csv              #   (pid, wave, total_hours_per_day) — raw sessions, no double-counting
     game_metadata_long.csv          #   (original_name, platform, genre, n_genres_valid) — genre lookup table
-  raw/                              # Raw input data (unused)
+  raw/                              # survey_biweekly_raw.csv.gz from the release (input of R/00_baseline_days.R)
+  reference/                        # baseline_days.csv (tracked)
 pre-registration/
   4_genres.qmd                      # Original pre-registration notebook (synthetic data)
   Ballou_etal_IPA (1).pdf           # Full Stage 1 Registered Report PDF
-open_play/
-  index.qmd                         # Open Play dataset descriptor paper
-  data-process.qmd                  # Open Play data cleaning pipeline (produces data/clean/)
+reference/open_play_v1.3.0/         # LOCAL ONLY: README, codebook, index.qmd (data paper) and data-process.qmd copied from the v1.3.0 archive
 demographics paper/
   index.qmd                         # Demographics descriptive paper (Ballou) — uses same data + genres
   references.bib                    # Bibliography for demographics paper
 _extensions/                        # Quarto typst preprint extension (mvuorre/preprint)
-renv.lock                           # R dependency lockfile (only renv locked so far)
+renv.lock                           # R dependency lockfile (incl. cmdstanr from the Stan R-universe)
 .Rprofile                           # Activates renv
-.Renviron                           # IGDB API credentials (DO NOT COMMIT)
-.gitignore                          # Ignores data/*, *.md, R/*, caches, build artifacts
+.gitignore                          # Ignores data (except data/reference and the sim_recovery CSVs), models, caches, notes, local folders
+docs/                               # GitHub Pages output: index.html, manuscript.{docx,pdf}, manuscript_v43.{docx,pdf,html}
+models/                             # LOCAL ONLY (22 GB): current fits; archive_v121/, archive_v126/, archive_pre_wave7/ and daily/archive_* hold earlier fits
+notes/                              # LOCAL ONLY: working documents, review plans, checklists, internal_2026-04/
+literature/                         # LOCAL ONLY: Zotero digests (see Literature section)
+reviews/coauthor_docx/              # LOCAL ONLY: co-author Word copies with comments (v3 to v4.2-draft, Tamás/Nick edits)
+archive/                            # LOCAL ONLY: superseded documents, old renders, dev scripts; see archive/README.md and MANIFEST.tsv
+data/archive/                       # LOCAL ONLY: earlier releases and pipeline outputs (v1.1.0 extract, clean/processed v1.2.1 and v1.2.6, the v1.3.0 zip)
 ```
+
+Clean-up of 2026-10-18: nothing was deleted; superseded material was moved into `archive/`, `reviews/`,
+`reference/` and `data/archive/` (all gitignored) with a manifest. Root build artefacts that Quarto
+regenerates (`manuscript_files/`, `manuscript_v43_files/`, the two caches) stay where Quarto expects them.
+`manuscript_v43.qmd` is not in the `_quarto.yml` render list, so its outputs land in the repo root and
+are moved into `docs/` by hand after each render (its html output file is `manuscript_v43.html`).
 
 ## Data Pipeline
 
-1. **Download data** — `make data` downloads [Open Play v1.2.6 from Zenodo](https://zenodo.org/records/22811439) (~197MB ZIP; then `Rscript R/00_baseline_days.R` once, which needs the v1.2.1 biweekly file in `data/clean_v121/` or downloads it), extracts, and copies clean data files (including `game_metadata.csv.gz`) to `data/clean/`. These files already have pre-registered exclusions applied. Source repo: [digital-wellbeing/open-play](https://github.com/digital-wellbeing/open-play).
+1. **Download data** — `make data` downloads [Open Play v1.3.0 from Zenodo](https://zenodo.org/records/23419571) (~200MB ZIP), extracts it, and copies the clean data files (including `game_metadata.csv.gz`) to `data/clean/` and the raw biweekly survey file to `data/raw/survey_biweekly_raw.csv.gz`. The clean files already have pre-registered exclusions applied. Then run `Rscript R/00_baseline_days.R` once: it rebuilds `data/reference/baseline_days.csv` from the raw file and stops unless it reproduces the clean biweekly file row for row. Source repo: [digital-wellbeing/open-play](https://github.com/digital-wellbeing/open-play).
 2. **Preprocess (main)** — `Rscript R/01_preprocess.R` (multi-genre deviation). Expands `game_metadata.csv.gz` genres to long format (up to 3 genres per game), joins to telemetry, assigns waves, and aggregates. Outputs to `data/processed/`:
    - `genre_wave_long.csv` — `(pid, wave, genre, hours_per_day)` long format
    - `total_playtime.csv` — `(pid, wave, total_hours_per_day)` without double-counting
    - `game_metadata_long.csv` — genre lookup table
-2b. **Primary-genre attribution** — `Rscript R/prep_primary_genre.R` (sources `01_preprocess.R`; same taxonomy, sample and waves, each game's playtime to its first valid genre only) → `data/processed/genre_wave_long_primary.csv`, used by chunk `frequentist-registered` (Appendix D table of registered frequentist analyses). `scripts/refit_v126.sh` reruns it (stage `prep_primary`) whenever the main processed files are newer.
-2c. **Earlier sample (D7)** — `Rscript R/prep_v121_sample.R` (sources `01_preprocess.R`; `clean_dir = "data/clean_v121"`, `analytic_pids(require_qualified = FALSE)`, the v1.2.1 file's own `ideal_baseline_day`) → `data/processed_v121/{genre_wave_long,total_playtime}.csv`, read by chunk `frequentist-registered` for the earlier-sample rows. Downloads v1.2.1 into `data/clean_v121/` if files are missing. If the archived files exist, it only checks that it reproduces them for the 1,838 earlier-sample participants (the archive also holds rows for about 60 participants without a valid SWEMWBS, which never enter the analysis) and does not overwrite them.
+2b. **Primary-genre attribution** — `Rscript R/prep_primary_genre.R` (sources `01_preprocess.R`; same taxonomy, sample and waves, each game's playtime to its first valid genre only) → `data/processed/genre_wave_long_primary.csv`, used by chunk `frequentist-registered` (Appendix D table of preregistered frequentist analyses). `scripts/refit_v130.sh` reruns it (stage `prep_primary`) whenever the main processed files are newer.
 3. **Preprocess (pre-reg, supplementary)** — `Rscript R/01_preprocess_prereg.R`. Primary genre only. Output: `data/aggregated_playtime_prereg.csv`.
 4. **Render** — `quarto render manuscript.qmd`.
 
@@ -243,7 +253,7 @@ The demographics paper's genre pipeline is much simpler than the current repo's:
 
 This means `R/01_fetch_igdb.R` is **entirely unnecessary** if `game_metadata.csv.gz` is available. The IGDB genre data was already fetched and released as part of the Open Play dataset. The current repo's approach of calling the IGDB API is redundant.
 
-### Reference manuscript: `open-play-genres/papers/genres/index.qmd`
+### Reference manuscript: `archive/manuscript_versions/papers/genres/index.qmd` (earlier repository structure, March 2026; archived 2026-10-18)
 This is a polished earlier version of the same analysis with proper structure:
 - Sources `01_preprocess.R` at the top via `source(here("papers/genres/R/01_preprocess.R"))`
 - Calls `preprocess_genre_data()` which runs the full pipeline and returns aggregated data
@@ -294,41 +304,76 @@ Cite only keys that exist in `bibliography.bib`: run `python3 scripts/zotero_dig
 
 Digests are model-written (Claude Sonnet 5; model recorded in each digest's frontmatter); treat them as a map and verify numbers with step 4. The tool is two-layered: the project-independent core digest of each paper is stored as a Zotero child note when `ZOTERO_API_KEY` is set (else in `~/.local/share/zotero-digest/notes/`), and the project layer is generated from that note. Regenerate or extend with `python3 scripts/zotero_digest.py run` (config in `zotero-digest.json`; needs Zotero running; skips up-to-date papers; `--dry-run`, `--only <citekey>`, `--force`). The script is a copy of the standalone tool at https://github.com/Thomhak/zotero-digest (canonical; update from there). `literature/` is gitignored.
 
-## Sample rule and the v1.2.6 migration (since 2026-10-13)
+## Data release and sample rule (Open Play v1.3.0, since 2026-10-17)
 
-The study analyses **Open Play v1.2.6** (Zenodo record 22811439). The analytic sample is
+The study analyses **Open Play v1.3.0** (Zenodo record 23419571, DOI 10.5281/zenodo.23419571,
+released 16 Oct 2026). v1.3.0 re-keyed survey and console records to each participant's
+canonical identifier, corrected the intake `qualified` flag (79 of the 306 flags revoked in
+v1.2.4 were restored) and removed 362 duplicate sign-ups (backend PR
+digital-wellbeing/platform-study-rr-backend#10). The sample rule is unchanged:
 **participants with `qualified == TRUE` in `data/clean/survey_intake.csv.gz` AND at least one
 valid SWEMWBS in waves 1–6**, implemented once as `analytic_pids()` in `R/01_preprocess.R`
 (`load_survey_data(pids = analytic_pids())`); every R script and manuscript chunk that reads
-survey files goes through it (the daily diary too, in `R/04_daily_aggregate.R`). Under v1.2.1
-the sample was anyone with a valid SWEMWBS (1,838); the v1.2.4 upstream fix revoked `qualified`
-for 306 intakes, 133 of them in that sample, and 97 further participants have no intake record
-at all, so the sample is now 1,608 participants and 6,293 person-waves (Deviation D7). Reference
-lists (tracked via a `.gitignore` exception): `data/reference/revoked_qualified_pids.csv` (306)
-and `data/reference/no_intake_record_pids.csv` (97), written by `R/00_revoked_pids.R` from the
-v1.2.1 files kept in `data/clean_v121/` (gitignored). Old pipeline outputs are in
-`data/processed_v121/`; the new `genre_wave_long.csv`/`total_playtime.csv` are row-identical to
-the old ones for every kept participant.
+survey files goes through it (the daily diary too, in `R/04_daily_aggregate.R`). On v1.3.0 the
+sample is **1,668 participants and 6,518 person-waves** (v1.2.6: 1,608 and 6,293).
 
-All brms fits, the imputation, demographic sensitivity, LOO and daily models
-must be regenerated: `scripts/refit_v126.sh` (resumable, logged under `~/open-play-render-logs/`,
-memory-guarded; first archives the old fits to `models/archive_v121/`; `REFIT_DRYRUN=1` shows the
-plan). It fits M1–M4 by purling and executing the manuscript's own chunks (`R/fit_main_models.R`),
-precomputes LOO one fit at a time (`R/05_loo.R` → `models/loo_*.rds`, read by the
-`loo-comparison` chunk), and ends with a cold `--to docx` render that is expected to stop on
-stale `stopifnot` pins; re-pin them from the post-refit checklist (`notes/post_refit_checklist_v126.md` (leading copy)). Until that run, every number in the
-manuscript is still the v1.2.1 value. `scripts/run_refit.sh` is superseded and disabled.
+The baseline-day sidecar `data/reference/baseline_days.csv` (tracked) is rebuilt by
+`R/00_baseline_days.R` from the same release's raw biweekly file
+(`data/raw/survey_biweekly_raw.csv.gz`, extracted by `make data`) with the rule of Open Play's
+`data-process.qmd`. Run it once after `make data`; it stops unless it reproduces the clean
+biweekly file row for row. There is no dependency on v1.2.1 any more.
 
-- **M4 recovery simulation (2026-10-14):** `SIM_REPS=20 SIM_ITER=8000 SIM_RENDER=1 Rscript R/sim_mm_recovery.R` (about 20 min per replication; resumable; refuses saved replications if the four M4 chunks change). Outputs in `data/processed/sim_recovery/` (`recovery_summary.csv`, `diagnostics.csv`), read by chunk `sim-recovery-summary` with guards (20 reps, coverage ≥ 19/20, 0 divergences). Report `R/sim_mm_recovery_report.html`.
+No deviation is recorded for a change of data release (Thomas, 2026-10-17): the paper is built
+on the most recent release, which the Methods name (v1.3.0, record 23419571). Deviation D7
+(qualified-only sample) and the earlier-sample (v1.2.1) comparison in Appendix D were removed,
+together with `R/00_revoked_pids.R`, `R/prep_v121_sample.R` and the reference lists of revoked
+and no-intake participants. Local copies of earlier releases and outputs (gitignored):
+`data/archive/clean_v121/`, `data/archive/clean_v126/`, `data/archive/processed_v121/`, `data/archive/processed_v126/`.
+
+All brms fits, the imputation, demographic sensitivity, LOO, the daily models and the M4
+recovery simulation are regenerated by `scripts/refit_v130.sh` (resumable, memory-guarded,
+logged under `~/open-play-render-logs/refit_v130_*`; `REFIT_DRYRUN=1` shows the plan). It first
+archives the v1.2.6 outputs once (`models/*.rds` → `models/archive_v126/`, `models/daily/*.rds` →
+`models/daily/archive_v126/`, `data/processed/imputation/` and `data/processed/sim_recovery/` →
+`data/archive/processed_v126/`). It fits M1–M4 by purling and executing the chunks of `manuscript.qmd`
+(`R/fit_main_models.R`); preflight stops unless `manuscript_v43.qmd` has the same chunk labels
+and identical chunk code outside the nine known prose/guard chunks (`KNOWN_CHUNK_DIFFS`), so one
+set of fits serves both files. It precomputes LOO one fit at a time (`R/05_loo.R` →
+`models/loo_*.rds`, read by the `loo-comparison` chunk), reruns the recovery simulation (stage
+`sim_recovery`), and ends with cold `--to docx` renders of `manuscript_v43.qmd` and then
+`manuscript.qmd`, which are expected to stop on stale `stopifnot` pins; re-pin them from the
+post-refit checklist (`notes/post_refit_checklist_v130.md`). Lanes run stages in parallel:
+`REFIT_LANE=<name> REFIT_STAGES="..."` starts a helper lane beside the main lane (own lock,
+progress log and memory guard; it waits for the main lane's archive and data manifest). A stage
+lock keeps a stage from running in two lanes, the main lane skips what a helper lane finished,
+and `REFIT_WAIT_FOR="stage:<name> <file>"` delays a lane. Until that run, every fitted number in
+the manuscript (and the fit-dependent pins) is still a v1.2.6 value; data-only numbers (sample,
+descriptives, missingness, the abstract hours and titles, the lme4 preregistered tests) are already
+v1.3.0. The superseded `run_refit.sh` is archived under `archive/scripts_dev/`.
+
+**Stan backend (since 2026-10-17):** every brms fit samples with CmdStan 2.39 through `cmdstanr`
+0.9.0 (installed from https://stan-dev.r-universe.dev, not CRAN; `cmdstanr::install_cmdstan()`),
+with within-chain parallelisation `brms::threading(3)` (3 threads x 4 chains = the 12 cores of the
+M3 Pro). Set once by `options(brms.backend = "cmdstanr", brms.threads = ...)` in the `setup` chunk
+(both qmds, identical) and at the top of `R/fit_daily_models.R`, `R/fit_sensitivity_models.R` and
+`R/sim_mm_recovery.R`; no `brm()` call carries a `backend`/`threads` argument except the AR(1)
+daily refit (`threads = NULL`, because brms refuses threading for ARMA terms). Measured on M3 (one
+chain, 200 iterations): 14 min with 3 threads against more than 30 min single-threaded (rstan or
+CmdStan), so stages run sequentially on one lane; two lanes would oversubscribe the cores. The
+Methods software sentence discloses CmdStan and the threading (`txt_cmdstan_version`). Posterior,
+priors and sampler settings are unchanged; only computation time differs.
+
+- **M4 recovery simulation (2026-10-14):** `SIM_REPS=20 SIM_ITER=8000 SIM_RENDER=1 Rscript R/sim_mm_recovery.R` (about 20 min per replication; resumable; refuses saved replications if the four M4 chunks change). Design constants (genre shares, labelled and unlabelled play, missing outcomes) recomputed on v1.3.0 on 2026-10-17. `SIM_REP_RANGE=a:b` restricts a process to replications a..b, so two processes can share the 20; the process that finds all of them on disk writes the summary and the report, the other exits 0. Outputs in `data/processed/sim_recovery/` (`recovery_summary.csv`, `diagnostics.csv`), read by chunk `sim-recovery-summary` with guards (20 reps, coverage ≥ 19/20, 0 divergences). Report `R/sim_mm_recovery_report.html`.
 
 ## Build Commands
 
 ```bash
-make data                           # Download Open Play v1.2.6 from Zenodo (~197MB); then Rscript R/00_baseline_days.R once
+make data                           # Download Open Play v1.3.0 from Zenodo (~200MB; clean files + raw biweekly file); then Rscript R/00_baseline_days.R once
+REFIT_DRYRUN=1 bash scripts/refit_v130.sh   # refit plan (archive, stages, lanes); changes nothing
 Rscript R/01_preprocess.R           # Run preprocessing pipeline (uses game_metadata.csv.gz)
 quarto render manuscript.qmd        # Render manuscript (all formats)
 quarto render manuscript.qmd --to docx   # Word copy for co-author rounds (docs/manuscript.docx)
-python3 scripts/docx_changes.py docs/manuscript_v3.2.docx   # list tracked changes + comments
+python3 scripts/docx_changes.py reviews/coauthor_docx/manuscript_v3.2.docx   # list tracked changes + comments
 rm -rf manuscript_cache             # clear knitr cache after ANY data/model/R-script change
 quarto preview manuscript.qmd       # Live preview
 Rscript -e "renv::restore()"        # Restore R dependencies (lockfile incomplete)
@@ -337,14 +382,14 @@ Rscript -e "renv::restore()"        # Restore R dependencies (lockfile incomplet
 ## Co-author docx review loop (since 2026-08-31)
 
 - `execute: cache: true` is on globally (knitr chunk cache in `manuscript_cache/`). Prose-only edits re-render in a minute or two; the `setup` and `model-data` chunks are `cache: false` because their side effects (locale, seed, `options()`, `theme_set()`) are not restored from cache. Cached chunks do NOT notice changed input files: run `rm -rf manuscript_cache` before rendering after any change to `data/`, `models/`, or `R/*.R`.
-- `docs/manuscript.docx` is a build artefact, overwritten by every render; never edit it in place. Co-author copies are saved as `docs/manuscript_v3.x.docx` (gitignored: `docs/` is the GitHub Pages directory, and these files carry comments). Extract with `scripts/docx_changes.py`, implement in `manuscript.qmd`, re-render. Word Review → Compare (their `v3.x` vs the fresh render) shows what was implemented.
+- `docs/manuscript.docx` is a build artefact, overwritten by every render; never edit it in place. Co-author copies live in `reviews/coauthor_docx/` (local only; moved out of `docs/`, the GitHub Pages directory, on 2026-10-18). Extract with `scripts/docx_changes.py`, implement in `manuscript.qmd`, re-render. Word Review → Compare (their `v3.x` vs the fresh render) shows what was implemented.
 - `_quarto.yml` post-render must be `./ensure-nojekyll.sh` (Quarto 1.9 does not spawn a bare filename).
 - `loo-comparison` is the other memory bomb: computing LOO for the four fits builds draws × observations log-likelihood matrices on top of the loaded fits and memory-killed the machine on 2026-09-01 when a derived qmd (`manuscript_conventional.qmd`) rendered with a cold cache. Never render any of these qmds with a cold/deleted cache wholesale; seed the new cache by copying entries for byte-identical chunks from `manuscript_cache/<format>/` first (knitr keys caches on content hash, so copied entries hit), and only invalidate `loo-comparison` deliberately, ideally overnight with everything else closed.
 - The six chunks that load brms fits (`h1-fit`, `h2-fit`, `h2-hier-fit`, `h2-mm-fit`, `daily-fits`, `sensitivity-demographics-bayes`) are `cache: false` on purpose: loading from `models/*.rds` is fast, and caching them made knitr serialise ~6 GB of fit objects per output format, which pushed a 19 GB machine into kernel memory-pressure kills on 2026-08-31 (the render and the Claude Code session both died). Do not re-enable caching on them. knitr keeps one cache per format (`manuscript_cache/{docx,html,typst}`), so `--to docx` only warms the docx cache.
 
 ## Known Infrastructure Issues
 
-- **Data not yet downloaded:** `data/clean/` is empty. Run `make data` first (downloads ~194MB from Zenodo).
+- **Data not yet downloaded:** `data/clean/` is empty. Run `make data` first (downloads ~200MB from Zenodo).
 - **renv lockfile:** Updated with all required packages. Run `renv::restore()` to install.
 - **Path inconsistency:** ✅ **Resolved** — Manuscript now sources `01_preprocess.R` and loads real data from `data/clean/`.
 - **Co-author roles:** Blank for all co-authors except Hakman.
@@ -359,8 +404,8 @@ Rscript -e "renv::restore()"        # Restore R dependencies (lockfile incomplet
 - Joint Wald tests via `car::linearHypothesis()` for H2 (genre coefficient equality)
 - Multiplicity correction via `multcomp::glht()` for genre-level CIs in caterpillar plot
 - Missing data imputation via `mice` (not yet implemented, required by pre-reg)
-- **H1 decision rules (since 2026-10-13):** main text = Bayesian ROPE rule (95% CrI inside ±0.06; Deviation D3). Registered rule = the full Stage 1 Design Table grid on the 90% CI (`reg_h1_verdict()` in chunk `frequentist-registered`: practically significant / may be practically significant / not practically significant, positive or negative; no practically significant association when the CI covers 0 inside ±0.06; inconclusive). On v1.2.6: H1a "No practically significant association", H1b "Negative association, not practically significant"; the all-platform H1b CI includes 0, so it is "No practically significant association". Imputation verdicts use the same function.
-- **H2 carries no SESOI verdict (since 2026-10-13):** H2 is answered only by the registered joint Wald tests (h2-wald; within p = .023 rejects, between p = .398 does not; primary attribution rejects neither). The spreads (M2 per-draw SD, M3 τ, M4 σ_s) are descriptive: `het_share()` (share/expected number of the 14 genres > 0.06 from the average), `pair_share()` (share of genre pairs > 0.06 apart) and the ROPE share. 0.031 (0.06/1.96) and 0.022 (0.06/(1.96·√2)) are reference values only, never thresholds. Do not reintroduce "practically negligible"/"inconclusive" verdicts for H2.
+- **H1 decision rules (since 2026-10-13):** main text = Bayesian ROPE rule (95% CrI inside ±0.06; Deviation D3). Registered rule = the full Stage 1 Design Table grid on the 90% CI (`reg_h1_verdict()` in chunk `frequentist-registered`: practically significant / may be practically significant / not practically significant, positive or negative; no practically significant association when the CI covers 0 inside ±0.06; inconclusive). On v1.3.0 (lme4, final, 2026-10-17): H1a and H1b both "No practically significant association" (H1b 90% CI [-0.0307, 0.0002], upper bound just above zero); the all-platform H1b likewise [-0.0302, 0.0005]. (On v1.2.6 H1b had been "Negative association, not practically significant".) The all-platform H1b CI includes 0, so it is "No practically significant association". Imputation verdicts use the same function.
+- **H2 carries no SESOI verdict (since 2026-10-13):** H2 is answered only by the registered joint Wald tests (h2-wald; on v1.3.0, lme4, final: within p = .025 rejects, between p = .315 does not; primary attribution rejects neither, p = .216 / .284). The spreads (M2 per-draw SD, M3 τ, M4 σ_s) are descriptive: `het_share()` (share/expected number of the 14 genres > 0.06 from the average), `pair_share()` (share of genre pairs > 0.06 apart) and the ROPE share. 0.031 (0.06/1.96) and 0.022 (0.06/(1.96·√2)) are reference values only, never thresholds. Do not reintroduce "practically negligible"/"inconclusive" verdicts for H2.
 
 ## Genre Taxonomy
 

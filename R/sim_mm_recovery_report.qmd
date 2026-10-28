@@ -58,6 +58,9 @@ rep1      <- readRDS(file.path(out_dir, "reps", "rep_001.rds"))
 n_reps   <- max(by_rep$rep)
 n_params <- nrow(summ)
 stopifnot(n_distinct(summ$parameter) == n_params, all(summ$n_reps == n_reps))
+# The text below says that every simulated wave has a wellbeing score, as in the
+# analysed data (Open Play v1.3.0 has no incomplete SWEMWBS in the analysed waves).
+stopifnot(run_info$p_missing_y == 0)
 
 param_labels <- c(
   Intercept       = "Intercept",
@@ -136,7 +139,7 @@ Each replication simulates `r run_info$n_persons` participants with `r run_info$
 - each participant has a habitual playtime (log-normal, mean about 1.7 hours/day) and a share of waves with any play (about 85% on average);
 - in waves with play, playtime varies around the habitual level, and each of the 14 genres is played with a participant-specific probability centred on the share of real person-waves that include that genre (e.g., adventure `r sprintf("%.0f%%", 100 * run_info$genre_share[["adventure"]])`, visual novel `r sprintf("%.0f%%", 100 * run_info$genre_share[["visual_novel"]])`);
 - a genre's exposure is a random fraction of the wave's playtime, so that, as in the real data, the summed genre hours of a wave are about twice its playtime (a game carries several genre labels);
-- `r sprintf("%.1f%%", 100 * run_info$p_unlabelled)` of waves have play without any genre label, and `r sprintf("%.1f%%", 100 * run_info$p_missing_y)` of waves have no wellbeing score. The first rate is about half the real one, so that the manuscript's guard in `mm-data-setup` (fewer than 10% of the uniform-weight waves contain play) rarely fails. It can still fail by chance (4 of the first 150 simulated inputs, checked without fitting); such an input is redrawn with a new seed, and @tbl-diagnostics shows how many draws each replication needed.
+- `r sprintf("%.1f%%", 100 * run_info$p_unlabelled)` of waves have play without any genre label, and every wave has a wellbeing score, as in the analysed data. The first rate is about half the real one, so that the manuscript's guard in `mm-data-setup` (fewer than 10% of the uniform-weight waves contain play) rarely fails. It can still fail by chance; such an input is redrawn with a new seed, and @tbl-diagnostics shows how many draws each replication needed.
 
 After the manuscript chunks have built the centred predictors and the weights, the outcome is generated from the model that M4 assumes:
 

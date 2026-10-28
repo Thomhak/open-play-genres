@@ -48,10 +48,11 @@
 # Usage: Rscript R/02_impute_wemwbs.R
 #        or source() and call impute_wemwbs() (used by manuscript.qmd)
 #
-# Sample (Open Play v1.2.6): the grid is restricted to analytic_pids() from
+# Sample (Open Play v1.3.0): the grid is restricted to analytic_pids() from
 # R/01_preprocess.R (intake qualified == TRUE AND >= 1 valid SWEMWBS in waves
-# 1-6). The v1.2.1 outputs were archived to data/processed_v121/imputation/;
-# this script must be re-run for v1.2.6 (scripts/refit_v126.sh).
+# 1-6). scripts/refit_v130.sh moves the v1.2.6 outputs to
+# data/archive/processed_v126/imputation/ and re-runs this script (the v1.2.1 outputs
+# are in data/archive/processed_v121/imputation/).
 # =============================================================================
 
 library(here)

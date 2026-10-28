@@ -2,7 +2,7 @@
 """List tracked changes and comments in a Word .docx (stdlib only).
 
 Usage:
-  python3 scripts/docx_changes.py docs/manuscript_v3.2.docx
+  python3 scripts/docx_changes.py reviews/coauthor_docx/manuscript_v3.2.docx
 
 Prints every paragraph that carries a tracked insertion ({+...+}), deletion
 ([-...-]) or comment anchor (<<Cnn: ... >>), with author/date, followed by the

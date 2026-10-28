@@ -24,7 +24,7 @@
 # The two invocations are independent and can run concurrently.
 #
 # DATA VERSION: these fits (and models/daily/sesoi.rds) must be regenerated
-# for Open Play v1.2.6 and the qualified-only analytic sample (analytic_pids()
+# for Open Play v1.3.0 and the qualified-only analytic sample (analytic_pids()
 # in R/01_preprocess.R: intake qualified == TRUE AND >= 1 valid SWEMWBS in
 # biweekly waves 1-6). The diary frame is filtered upstream in
 # R/04_daily_aggregate.R (re-run it first); the biweekly SWEMWBS and
@@ -32,8 +32,11 @@
 # unchanged except M3-D's: models/daily/m3_daily_ls_v3 (2026-10-13) when its
 # genre-distribution centres became estimated parameters (the _v2 fit is
 # zero-centred), and models/daily/m3_daily_ls_v4 (2026-10-14) for the
-# non-centred form; the v1.2.1 fits are archived to
-# models/daily/archive_v121/ by scripts/refit_v126.sh before refitting.
+# non-centred form. scripts/refit_v130.sh moves the v1.2.6 fits to
+# models/daily/archive_v126/ before refitting (the v1.2.1 fits are in
+# models/daily/archive_v121/). Every block rewrites models/daily/sesoi.rds at
+# start with the same values (bridge then adds its own entries, so run bridge
+# last), which lets the driver's daily stages run in parallel lanes.
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -46,6 +49,12 @@ suppressPackageStartupMessages({
 # biweekly pipeline (guarded by sys.nframe()).
 source(here("R/01_preprocess.R"))
 pids_analytic <- analytic_pids()
+
+# Stan backend, as in the manuscript's setup chunk: CmdStan through cmdstanr
+# with 3 threads per chain (computation time only). The AR(1) refit below sets
+# threads = NULL because brms does not support threading for ARMA terms.
+stopifnot(requireNamespace("cmdstanr", quietly = TRUE))
+options(brms.backend = "cmdstanr", brms.threads = brms::threading(3))
 
 which_block <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(which_block) || !which_block %in% c("mm", "rest", "bridge", "m2", "dyn")) {
@@ -187,6 +196,7 @@ if (which_block == "dyn") {
          (1 + total_within | pid)),
     data   = dyn_data,
     family = gaussian(),
+    threads = NULL,  # brms: no within-chain threading for ARMA terms
     chains = 4, iter = 4000, warmup = 2000, cores = 4, seed = 8675309,
     control = list(adapt_delta = 0.95),
     file = here("models/daily/m1_daily_ls_ar"), file_refit = "never"
@@ -332,8 +342,8 @@ if (which_block == "dyn") {
   # = b_sum_within / b_sum_between is flat, and tau = the SDs of the two mm
   # intercepts take the default half-Student-t(3, 0, S_D), with S_D the
   # scale brms assigns to every SD of this fit (default_sd_scale(); for
-  # life_sat on 0-100 it is set by mad(life_sat): S_D = 22.2 on the v1.2.6
-  # frame as of 2026-10-13, printed to the log at fit time).
+  # life_sat on 0-100 it is set by mad(life_sat): S_D was 22.2 on the v1.2.6
+  # frame (2026-10-13); the value of each fit is printed to the log).
   hier_genres <- sub("^gh_", "", gh_cols)
   hier_gw <- paste0("gW_", seq_along(gh_cols))
   hier_gb <- paste0("gB_", seq_along(gh_cols))

@@ -21,7 +21,7 @@
 # not how much genre-matched playtime there is. The script reports how many
 # games and minutes that affects.
 #
-# Used by the manuscript's Appendix D table of the registered frequentist
+# Used by the manuscript's Appendix D table of the preregistered frequentist
 # analyses (chunk frequentist-registered, H2 under primary attribution).
 #
 # Usage (from the repo root): Rscript R/prep_primary_genre.R

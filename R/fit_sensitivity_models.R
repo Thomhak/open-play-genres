@@ -10,10 +10,11 @@
 # Runtime: ~30-90 minutes per model on 4 parallel chains.
 # Usage:   Rscript R/fit_sensitivity_models.R
 #
-# DATA VERSION: these fits must be regenerated for Open Play v1.2.6 and the
+# DATA VERSION: these fits must be regenerated for Open Play v1.3.0 and the
 # qualified-only analytic sample (analytic_pids() in R/01_preprocess.R). The
-# brms `file =` targets are unchanged; the v1.2.1 fits are archived to
-# models/archive_v121/ by scripts/refit_v126.sh before refitting.
+# brms `file =` targets are unchanged; scripts/refit_v130.sh moves the v1.2.6
+# fits to models/archive_v126/ before refitting (the v1.2.1 fits are in
+# models/archive_v121/).
 # =============================================================================
 
 library(here)
@@ -27,6 +28,10 @@ suppressPackageStartupMessages({
 source(here("R/01_preprocess.R"))
 
 options(mc.cores = max(1L, parallel::detectCores() - 1L))
+# Stan backend, as in the manuscript's setup chunk: CmdStan through cmdstanr
+# with 3 threads per chain (computation time only).
+stopifnot(requireNamespace("cmdstanr", quietly = TRUE))
+options(brms.backend = "cmdstanr", brms.threads = brms::threading(3))
 dir.create(here("models"), showWarnings = FALSE, recursive = TRUE)
 
 # --- Replicates manuscript.qmd chunk `build-demographics` -------------------
